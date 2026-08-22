@@ -100,7 +100,8 @@ export const PRIMARY_NAV: readonly NavItem[] = [
     id: "auditFefo",
     labelKey: "nav.auditFefo",
     icon: ShieldCheck,
-    live: false,
+    live: true,
+    path: "/audit",
   },
   {
     id: "settings",

@@ -13,6 +13,7 @@
  * `/customers/:id`, and `/customers/:id/review` are registered subpaths.
  * Batch AZ: `/staff/shifts` list and `/staff/shifts/:id` placeholder before
  * staff user detail params. Batch BC enables `/reports`; Batch BF adds `/reports/sales`.
+ * Batch BJ enables `/audit`; `/audit/:auditId` is registered for Batch BK detail.
  */
 
 export const OWNER_PATHS = [
@@ -24,6 +25,7 @@ export const OWNER_PATHS = [
   "/customers",
   "/staff",
   "/reports",
+  "/audit",
 ] as const;
 
 export type OwnerPath = (typeof OWNER_PATHS)[number];
@@ -74,6 +76,12 @@ if (
   ) {
     return true;
   }
+  if (
+    pathname.startsWith("/audit/") &&
+    pathname.length > "/audit/".length
+  ) {
+    return true;
+  }
   return false;
 }
 
@@ -96,7 +104,17 @@ if (pathname === "/inventory" || pathname.startsWith("/inventory/")) {
     return "/staff";
   }
   if (pathname === "/reports" || pathname.startsWith("/reports/")) return "/reports";
+  if (pathname === "/audit" || pathname.startsWith("/audit/")) return "/audit";
   return "/";
+}
+
+export type AuditSubpath = { kind: "dashboard" } | { kind: "detail"; auditId: string };
+
+export function auditSubpath(pathname: string): AuditSubpath {
+  if (!pathname.startsWith("/audit/")) return { kind: "dashboard" };
+  const id = pathname.slice("/audit/".length).split("/").filter(Boolean)[0];
+  if (!id) return { kind: "dashboard" };
+  return { kind: "detail", auditId: decodeSegment(id) };
 }
 
 export type ReportsSubpath = { kind: "dashboard" } | { kind: "sales" };
@@ -116,7 +134,8 @@ export function ownerPathTitleKey(
   | "nav.suppliers"
   | "nav.customers"
   | "nav.staff"
-  | "nav.reports" {
+  | "nav.reports"
+  | "nav.auditFefo" {
   if (path === "/sales") return "nav.sales";
   if (path === "/inventory") return "nav.inventory";
   if (path === "/purchasing") return "nav.purchasing";
@@ -124,6 +143,7 @@ export function ownerPathTitleKey(
   if (path === "/customers") return "nav.customers";
   if (path === "/staff") return "nav.staff";
   if (path === "/reports") return "nav.reports";
+  if (path === "/audit") return "nav.auditFefo";
   return "nav.dashboard";
 }
 

@@ -54,7 +54,7 @@ Prisma / JWT roles (locked): `SUPER_ADMIN` \| `OWNER` \| `MANAGER` \| `CASHIER`.
 ### Pharmacy Owner
 
 * **Access:** Root authority for one tenant.
-* **Live UI:** Owner web (`apps/web`) — **M6 Slice 1 A–O DONE** + **Slice 2 P–AB DONE** + **Slice 3 AE–AM DONE** + **Slice 4 Staff AN–AV DONE** + **Slice 5 Shift Details and variance review through BB DONE** + Slice 6 Sales Report DONE. Manager/Cashier rejected on web. Slice 7 BI APIs are live; Audit UI is not live yet.
+* **Live UI:** Owner web (`apps/web`) — **M6 Slice 1 A–O DONE** + **Slice 2 P–AB DONE** + **Slice 3 AE–AM DONE** + **Slice 4 Staff AN–AV DONE** + **Slice 5 Shift Details and variance review through BB DONE** + Slice 6 Sales Report DONE + Slice 7 Audit & FEFO dashboard DONE. Manager/Cashier rejected on web. Audit Detail remains gated for BK.
 * **Until web exists:** Owner may log into desktop POS (`apps/desktop`) with the same JWT role. Desktop remains a **cashier workstation**, not the executive suite.
 * **Scope:** Financials and margins, staff, catalog/pricing, settings, audit, n8n (M6), multi-branch (M7).
 
@@ -96,7 +96,7 @@ Prisma / JWT roles (locked): `SUPER_ADMIN` \| `OWNER` \| `MANAGER` \| `CASHIER`.
 | Supplier return bucket, supplier ledger | Supplier profiles, PO, GRN, return queue, and manifest create APIs/UI live; Purchasing/Suppliers/Expiry Returns/Create Manifest web UI live | Manifest Details + dispatch lifecycle **deferred** (Slice 2 AC) |
 | Owner web Customers | Nav + live directory + Add + Details + Registration Review + POS Create — **Slice 3 AE–AM DONE** | Edit Customer = later |
 | Owner web Staff | **Live (M6 Slice 4 AN–AV)** — list/add/details/edit + deactivate/reactivate | — |
-| Audit & FEFO | **APIs live (M6 BI)** — StockAudit and FEFO violation records exist; Owner audit dashboard/list/detail/review/correct APIs live; Owner/Manager audit start/lines/submit APIs live; sale ingest records FEFO override violations. No Owner web Audit UI yet | Owner web Audit dashboard/detail = **BJ–BK** |
+| Audit & FEFO | **APIs live (M6 BI)** and Owner web Audit & FEFO dashboard live at `/audit` (M6 BJ). StockAudit and FEFO violation records exist; Owner audit dashboard/list/detail/review/correct APIs live; Owner/Manager audit start/lines/submit APIs live; sale ingest records FEFO override violations. Audit Detail UI remains gated. | Owner web Audit detail/review = **BK** |
 | Super Admin console, multi-branch, transfers | Not started | **M7** |
 | Sale void / delete | **Forbidden** (append-only) | Only if the user **re-authorizes** |
 | On-account / customer due tender | **Forbidden** | Never |
@@ -366,3 +366,4 @@ Do **not** implement:
 | 2026-08-22 | **M6 Batch BG / Slice 6 DONE** — Sales Report catalog §26 and composed `smoke:m6s6` complete; Slice 7 Audit & FEFO remains gated. |
 | 2026-08-22 | **M6 Batch BH** — StockAudit + FEFO violation schema/Zod/seed complete only. No audit routes or Owner web Audit UI until BI–BK authorization. |
 | 2026-08-22 | **M6 Batch BI** — Audit + FEFO APIs live. Owner-only audit dashboard/list/detail/review/correct; Owner/Manager audit start/lines/submit; sale ingest writes OPEN FEFO violation records on override. No Owner web Audit UI until BJ–BK. |
+| 2026-08-22 | **M6 Batch BJ** — Owner web Audit & FEFO dashboard live at `/audit`; consumes existing audit dashboard/list plus expiry APIs; Audit Detail remains Batch BK. |

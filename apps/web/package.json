@@ -50,6 +50,7 @@
     "smoke:m6bb": "tsx scripts/smoke-m6bb.ts",
     "smoke:m6bc": "tsx scripts/smoke-m6bc.ts",
     "smoke:m6bf": "tsx scripts/smoke-m6bf.ts",
+    "smoke:m6bj": "tsx scripts/smoke-m6bj.ts",
     "smoke:m6s5": "tsx scripts/smoke-m6s5.ts",
     "smoke:m6s6": "tsx scripts/smoke-m6s6.ts",
     "smoke:web-w2": "tsx scripts/web-w2-smoke.ts",

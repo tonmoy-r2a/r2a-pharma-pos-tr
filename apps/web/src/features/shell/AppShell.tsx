@@ -30,8 +30,10 @@ import {
 } from "@/features/customers";
 import { AddStaffPage, EditStaffPage, ShiftDetailPage, ShiftManagementPage, StaffPage, StaffDetailPage } from "@/features/staff";
 import { ReportsDashboardPage, SalesReportPage } from "@/features/reports";
+import { AuditDashboardPage } from "@/features/audit";
 import { useLocale } from "@/i18n";
 import {
+  auditSubpath,
   customersSubpath,
   inventorySubpath,
   purchasingSubpath,
@@ -157,7 +159,32 @@ function ShellMain() {
     if (sub.kind === "sales") return <SalesReportPage />;
     return <ReportsDashboardPage />;
   }
+  if (path === "/audit") {
+    const sub = auditSubpath(pathname);
+    if (sub.kind === "detail") {
+      return <AuditPlaceholder titleKey="audit.detail.placeholderTitle" hintKey="audit.detail.placeholderHint" />;
+    }
+    return <AuditDashboardPage />;
+  }
   return <DashboardPage />;
+}
+
+function AuditPlaceholder({
+  titleKey,
+  hintKey,
+}: {
+  titleKey: "audit.detail.placeholderTitle";
+  hintKey: "audit.detail.placeholderHint";
+}) {
+  const { t } = useLocale();
+  return (
+    <section className="mx-auto w-full max-w-7xl p-4 sm:p-6">
+      <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
+        <h1 className="text-xl font-semibold text-foreground">{t(titleKey)}</h1>
+        <p className="mt-2 max-w-2xl text-sm text-muted">{t(hintKey)}</p>
+      </div>
+    </section>
+  );
 }
 
 function SupplierPlaceholder({

@@ -8,9 +8,9 @@
 **RBAC contract:** [`ROLES_AND_PERMISSIONS.md`](ROLES_AND_PERMISSIONS.md)  
 **Authorized plan:** [`.cursor/plans/m6_slice_6_execution.plan.md`](.cursor/plans/m6_slice_6_execution.plan.md) (2026-08-22)
 
-**Status of Slices 6–8:** **IN PROGRESS** — Slice 6 **BE–BG DONE**; Slice 7 **BH–BI DONE**; **BJ–BQ not started**. Screens shared 2026-08-22.  
+**Status of Slices 6–8:** **IN PROGRESS** — Slice 6 **BE–BG DONE**; Slice 7 **BH–BJ DONE**; **BK–BQ not started**. Screens shared 2026-08-22.  
 **Prerequisite:** Milestone 0–**5** DONE; M6 Slice 1 **A–O DONE**; W1–W6 **DONE**; Slice 2 **P–AB DONE** (AC–AD **deferred**); Slice 3 **AE–AM DONE**; Slice 4 **AN–AV DONE**; Slice 5 **AW–BD DONE**.  
-**Do not start:** BJ+ until user says `Authorize M6 Batch BJ` (or the matching later batch). Slice 2 AC/AD, Manager web, n8n, RLS, bi-di, M7 multi-branch, Inventory/Purchase report detail pages (not shared), desktop stock-audit count UI (later batch) — unless re-authorized.
+**Do not start:** BK+ until user says `Authorize M6 Batch BK` (or the matching later batch). Slice 2 AC/AD, Manager web, n8n, RLS, bi-di, M7 multi-branch, Inventory/Purchase report detail pages (not shared), desktop stock-audit count UI (later batch) — unless re-authorized.
 
 ---
 
@@ -277,7 +277,7 @@ When done, paste the short M6 Batch BF report.
 
 **YOU DO:** Open `/reports/sales` from dashboard; scroll to Recent Sales Transactions; confirm layout vs mock.
 
-**Next:** Batch BG, BH, and BI are complete; next gated batch is `Authorize M6 Batch BJ`.
+**Next:** Batch BG, BH, BI, and BJ are complete; next gated batch is `Authorize M6 Batch BK`.
 
 ---
 
@@ -305,7 +305,7 @@ When done, paste the short M6 Batch BG report.
 
 **YOU DO:** Reports → View Report (Sales) → full scroll page with live data.
 
-**Next after PASS:** Batch BH and BI are complete; next gated batch is `Authorize M6 Batch BJ` (Audit & FEFO dashboard UI; ask for screen first).
+**Next after PASS:** Batch BH, BI, and BJ are complete; next gated batch is `Authorize M6 Batch BK` (Audit Detail + Review modal; ask for screens first).
 
 ---
 
@@ -384,7 +384,7 @@ Catalog **§27** at Batch BL.
 |-------|-------|---------|-----------|
 | **BH** | Prisma + Zod + seed | BG | No — **DONE** |
 | **BI** | Audit + FEFO APIs + ingest hook | BH | No — **DONE** |
-| **BJ** | Audit nav + Audit & FEFO dashboard | BI | **Audit & FEFO — ask first** |
+| **BJ** | Audit nav + Audit & FEFO dashboard | BI | **Audit & FEFO — DONE** |
 | **BK** | Audit Detail + Review modal + Apply FEFO | BJ | **Audit Detail — ask first**; Review modal ask/invent |
 | **BL** | Slice 7 exit | BH–BK | No |
 
@@ -420,7 +420,7 @@ When done, paste the short M6 Batch BH report.
 
 **YOU DO:** none.
 
-**Next:** Batch BI is complete; next gated batch is `Authorize M6 Batch BJ`.
+**Next:** Batch BI and BJ are complete; next gated batch is `Authorize M6 Batch BK`.
 
 ---
 
@@ -452,7 +452,7 @@ When done, paste the short M6 Batch BI report.
 
 **YOU DO:** none (API smoke).
 
-**Next:** `Authorize M6 Batch BJ` — agent will **ask for Audit & FEFO screen first**.
+**Next:** Batch BJ is complete; next gated batch is `Authorize M6 Batch BK`.
 
 ---
 
@@ -464,11 +464,11 @@ When done, paste the short M6 Batch BI report.
 
 ### Tasks
 
-- [ ] `nav.ts` `auditFefo` `live: true`, path `/audit`
-- [ ] KPI cards, Expiry Monitoring, FEFO Compliance, Recent Stock Audits, Activity Log
-- [ ] View → `/audit/:auditId`
-- [ ] Generate Report disabled
-- [ ] i18n en + bn-BD; `smoke:m6bj`
+- [x] `nav.ts` `auditFefo` `live: true`, path `/audit`
+- [x] KPI cards, Expiry Monitoring, FEFO Compliance, Recent Stock Audits, Activity Log
+- [x] View → `/audit/:auditId`
+- [x] Generate Report disabled
+- [x] i18n en + bn-BD; `smoke:m6bj`
 
 ### Exit check
 
@@ -809,4 +809,5 @@ When done, paste the short M6 Batch report.
 | 2026-08-22 | **M6 Batch BE completed:** OWNER-only `GET /api/v1/owner/reports/sales` + shared Zod response; range and optional tenant-scoped `storeId`; prior-period trend fields; `smoke:m6be` PASS. No Owner web UI; Sales View Report remains disabled. Next = `Authorize M6 Batch BF` (ask for Sales Report screenshot first). |
 | 2026-08-22 | **M6 Batch BG / Slice 6 completed:** `Completed_API_lists.md` §26 added; composed `smoke:m6s6` registered and PASS; Slice 6 complete. Next was `Authorize M6 Batch BH`. |
 | 2026-08-22 | **M6 Batch BH completed:** StockAudit + StockAuditLine + StockAuditActivityEvent + FefoViolationRecord Prisma schema/migration, shared Zod `audit.ts`, deterministic audit/FEFO seed. `prisma migrate deploy`, `prisma db seed`, and `smoke:m2` PASS. No routes/UI. Next was `Authorize M6 Batch BI`. |
-| 2026-08-22 | **M6 Batch BI completed:** live audit/FEFO APIs plus sale ingest hook. OWNER routes: dashboard/list/detail/review/correct; OWNER/MANAGER routes: audit start/lines/submit; `smoke:m6bi` PASS. No Owner web audit UI. Next = `Authorize M6 Batch BJ` (ask for Audit & FEFO screen first). |
+| 2026-08-22 | **M6 Batch BI completed:** live audit/FEFO APIs plus sale ingest hook. OWNER routes: dashboard/list/detail/review/correct; OWNER/MANAGER routes: audit start/lines/submit; `smoke:m6bi` PASS. No Owner web audit UI. Next was `Authorize M6 Batch BJ` (now done). |
+| 2026-08-22 | **M6 Batch BJ completed:** Audit & FEFO nav live at `/audit`; dashboard consumes live audit dashboard/list APIs plus existing expiry API; Generate Report and advanced filters disabled; detail links route to `/audit/:auditId` placeholder until BK. `smoke:m6bj`, web lint, and web build PASS. Next = `Authorize M6 Batch BK` (ask for Audit Detail + Review modal decision first). |

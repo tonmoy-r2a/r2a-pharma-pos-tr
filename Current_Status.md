@@ -12,14 +12,14 @@
 |------|--------|
 | **Product** | Offline-first, multi-tenant Pharmacy POS + Inventory SaaS (Bangladesh / emerging markets) |
 | **Phase** | Phase 1 MVP — DB + cloud API + desktop **M3 POS shell DONE**; **M4 DONE** (one-way sync). **M5 DONE** (RBAC + Receive stock + 409 copy + paged catalog + runbook) |
-| **Latest completed milestone** | **M5 — MVP hardening**; **M6 Owner Web Slice 1 A–O + W1–W6 DONE**, **Slice 2 P–AB DONE** (AC–AD **deferred**), **Slice 3 AE–AM DONE**, **Slice 4 Staff AN–AV DONE**, **Slice 5 Batch AX–BC DONE** (BD Slice 5 exit **DONE**), **Slice 6 BE–BG DONE**, **Slice 7 Batches BH–BI DONE** |
-| **Next gated work** | **Slice 7 BI DONE.** Next = **`Authorize M6 Batch BJ`** (Audit & FEFO dashboard UI; re-share required) or deferred Slice 2 **AC**. |
+| **Latest completed milestone** | **M5 — MVP hardening**; **M6 Owner Web Slice 1 A–O + W1–W6 DONE**, **Slice 2 P–AB DONE** (AC–AD **deferred**), **Slice 3 AE–AM DONE**, **Slice 4 Staff AN–AV DONE**, **Slice 5 Batch AX–BC DONE** (BD Slice 5 exit **DONE**), **Slice 6 BE–BG DONE**, **Slice 7 Batches BH–BJ DONE** |
+| **Next gated work** | **Slice 7 BJ DONE.** Next = **`Authorize M6 Batch BK`** (Audit Detail + Review modal + Apply FEFO; re-share required) or deferred Slice 2 **AC**. |
 | **Cloud database** | Neon PostgreSQL (Prisma migrate + seed applied; `RefreshToken` migration applied in M2) |
 | **Cloud API** | Express + TypeScript in `apps/server` — **real** (auth, tenant guard, inventory, FEFO, sales/sync ingest, sales/owner reads, product/batch management, OWNER-only suppliers, purchase orders, confirmed GRNs, and return manifests). General batch PATCH no longer mutates quantity. |
 | **Local desktop / SQLite / Tauri** | POS shell + one-way sync + Owner/Manager Receive Stock. Manual stock corrections are online-only signed deltas with required reason, expected version, idempotent event ID, 409 reload, and authoritative catalog refresh. |
 | **MongoDB / Mongoose** | Removed; do not reintroduce |
 
-**Bottom line:** M0–M5 remain DONE. **M6 IN PROGRESS** — Slices 1–6 **DONE** and Slice 7 **BH–BI DONE**. Next = **`Authorize M6 Batch BJ`** or deferred AC.
+**Bottom line:** M0–M5 remain DONE. **M6 IN PROGRESS** — Slices 1–6 **DONE** and Slice 7 **BH–BJ DONE**. Next = **`Authorize M6 Batch BK`** or deferred AC.
 ---
 
 ## 2. Milestone board (authoritative progress)
@@ -34,7 +34,7 @@ Source of truth for milestone status: [`PROJECT_MASTER_PLAN.md`](PROJECT_MASTER_
 | **M3** | Desktop POS shell | **DONE** | Slice 1–6 (A–AP). Later screens → Slice 7+ when authorized. See `MILESTONE_3_EXECUTION.md` |
 | **M4** | One-way sync | **DONE** | Batches A–F. Queue IPC + `/sync/ingest` + offline complete + 15s worker + Sync Queue panel + catalog §19. See `MILESTONE_4_EXECUTION.md` |
 | **M5** | MVP hardening | **DONE** | Batches A–F. RBAC API + desktop Settings Receive stock + Sync Queue 409 copy + paged catalog pull + runbook + catalog §20. Print/PIN stay stubs. See `MILESTONE_5_EXECUTION.md`. |
-| **M6** | Growth (Phase 2) | **IN PROGRESS** | Owner Web Slice 1 **A–O DONE** + W1–W6 **DONE**. Slice 2 **P–AB DONE**; **AC–AD deferred**. Slice 3 **AE–AM DONE**. Slice 4 **Staff AN–AV DONE**. Slice 5 **Batch AX–BC DONE** (BD Slice 5 exit **DONE**). Slice 6 **BE–BG DONE**. Slice 7 **BH–BI DONE**. |
+| **M6** | Growth (Phase 2) | **IN PROGRESS** | Owner Web Slice 1 **A–O DONE** + W1–W6 **DONE**. Slice 2 **P–AB DONE**; **AC–AD deferred**. Slice 3 **AE–AM DONE**. Slice 4 **Staff AN–AV DONE**. Slice 5 **Batch AX–BC DONE** (BD Slice 5 exit **DONE**). Slice 6 **BE–BG DONE**. Slice 7 **BH–BJ DONE**. |
 | **M7** | Scale (Phase 3) | **PENDING** | Multi-branch, transfers, enterprise RBAC |
 
 ### Milestone 1 execution batches (all green)
@@ -274,13 +274,13 @@ Detailed batch plan: [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md) (Slice
 
 ### Milestone 6 execution batches (Slice 7)
 
-Detailed batch plan: [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md) (Slice 7 section). **BH–BI DONE. BJ–BL gated.**
+Detailed batch plan: [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md) (Slice 7 section). **BH–BJ DONE. BK–BL gated.**
 
 | Batch | Title | Status | Date |
 |-------|-------|--------|------|
 | BH | Prisma + Zod + seed (StockAudit + FEFO violations) | **DONE** | 2026-08-22 |
 | BI | Audit + FEFO APIs + ingest hook | **DONE** | 2026-08-22 |
-| BJ | Audit nav + Audit & FEFO dashboard | **PENDING** | — |
+| BJ | Audit nav + Audit & FEFO dashboard | **DONE** | 2026-08-22 |
 | BK | Audit Detail + Review modal + Apply FEFO | **PENDING** | — |
 | BL | Slice 7 exit | **PENDING** | — |
 
@@ -686,7 +686,8 @@ Do **not** start these unless the user authorizes the matching milestone:
 - ~~M6 Slice 6 Batch BG~~ — **DONE** (`Completed_API_lists.md` §26; composed `smoke:m6s6`; Slice 6 complete)
 - ~~M6 Slice 7 Batch BH~~ — **DONE** (StockAudit + StockAuditLine + StockAuditActivityEvent + FefoViolationRecord Prisma schema, shared Zod `audit.ts`, demo audits/FEFO violations; no routes/UI; migrate + seed + `smoke:m2` PASS)
 - ~~M6 Slice 7 Batch BI~~ — **DONE** (OWNER-only audit dashboard/list/detail/review/correct APIs; OWNER/MANAGER audit start/lines/submit APIs; sale ingest creates OPEN FEFO violation records on real override; no Owner web audit UI; `smoke:m6bi` PASS)
-- **M6 Slice 7–8 planned** — [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md): Slice 7 full StockAudit + FEFO, Slice 8 Settings/Help/Owner Profile. Next = **Authorize M6 Batch BJ**
+- ~~M6 Slice 7 Batch BJ~~ — **DONE** (Audit & FEFO nav live at `/audit`; dashboard uses live audit dashboard/list APIs plus existing expiry API; Generate Report disabled; `/audit/:auditId` links route to BK placeholder; `smoke:m6bj` PASS)
+- **M6 Slice 7–8 planned** — [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md): Slice 7 full StockAudit + FEFO, Slice 8 Settings/Help/Owner Profile. Next = **Authorize M6 Batch BK**
 - Audit & FEFO / Settings / Help / Owner Profile — enable in Slices 7–8; **Reports** live (Slice 5 BC); Sales Report detail in Slice 6
 - Manager web, bi-directional sync, n8n workflows, and Postgres RLS (later authorized M6 batches)
 - Real Card terminal SDK / real MFS provider APIs (backend-confirmed status; no cashier manual Trx) — later authorized work
@@ -698,7 +699,7 @@ Do **not** start these unless the user authorizes the matching milestone:
 
 1. Read this file (`Current_Status.md`).
 2. Confirm M0–**M5** are **DONE**.
-3. **M6 Slices 1–6 DONE; Slice 7 BH–BI DONE.** Slices 7–8 continue in [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md). Next = **`Authorize M6 Batch BJ`** or deferred Slice 2 AC. Attach **`M6_SLICE_6_EXECUTION.md`** (not the full `MILESTONE_6_EXECUTION.md`) for Slice 7+ batches.
+3. **M6 Slices 1–6 DONE; Slice 7 BH–BJ DONE.** Slices 7–8 continue in [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md). Next = **`Authorize M6 Batch BK`** or deferred Slice 2 AC. Attach **`M6_SLICE_6_EXECUTION.md`** (not the full `MILESTONE_6_EXECUTION.md`) for Slice 7+ batches.
 4. Attach/reference:
    - `PROJECT_MASTER_PLAN.md`
    - `Current_Status.md`
@@ -955,5 +956,6 @@ user-facing strings. Runtime/domain data and receipt content remain untranslated
 | 2026-08-22 | **M6 Batch BE DONE** — OWNER-only `GET /api/v1/owner/reports/sales` with last-30-days default, range filters, optional tenant-scoped `storeId`, prior-period KPI trends, daily bars, payment summary, top category/cashiers/medicines, recent transactions; shared Zod response; `smoke:m6be` PASS. No UI; Sales View Report remains disabled. Next = **Authorize M6 Batch BF** (ask for Sales Report screenshot first). |
 | 2026-08-22 | **M6 Batch BG / Slice 6 EXIT DONE** — `Completed_API_lists.md` §26 added; composed `smoke:m6s6` registered and PASS; status/master-plan/RBAC synchronized. **Slice 6 complete.** M6 remains IN PROGRESS (Slice 2 AC–AD deferred; Slice 7+ gated). Next was **Authorize M6 Batch BH**. |
 | 2026-08-22 | **M6 Batch BH DONE** — StockAudit + StockAuditLine + StockAuditActivityEvent + FefoViolationRecord Prisma schema/migration; shared Zod `audit.ts`; deterministic IN_PROGRESS / COMPLETED / VARIANCE_FOUND audits and OPEN / CORRECTED FEFO violation seed. `prisma migrate deploy`, `prisma db seed`, and `smoke:m2` PASS. No routes/UI. Next was **Authorize M6 Batch BI**. |
-| 2026-08-22 | **M6 Batch BI DONE** — live Audit + FEFO APIs: `GET /owner/audit/dashboard`, `GET /owner/audits`, `GET /owner/audits/:id`, `POST /owner/audits/:id/review`, `POST /owner/fefo-violations/:id/correct`, `POST /audits/start`, `POST /audits/:id/lines`, `POST /audits/:id/submit`; sale ingest creates OPEN FEFO violation records for non-FEFO overrides; `smoke:m6bi` PASS. No web UI. Next = **Authorize M6 Batch BJ** (ask for Audit & FEFO screen first). |
+| 2026-08-22 | **M6 Batch BI DONE** — live Audit + FEFO APIs: `GET /owner/audit/dashboard`, `GET /owner/audits`, `GET /owner/audits/:id`, `POST /owner/audits/:id/review`, `POST /owner/fefo-violations/:id/correct`, `POST /audits/start`, `POST /audits/:id/lines`, `POST /audits/:id/submit`; sale ingest creates OPEN FEFO violation records for non-FEFO overrides; `smoke:m6bi` PASS. No web UI. Next was **Authorize M6 Batch BJ** (now done). |
+| 2026-08-22 | **M6 Batch BJ DONE** — Audit & FEFO nav live at `/audit`; dashboard consumes live `GET /owner/audit/dashboard`, `GET /owner/audits`, and existing `GET /owner/expiry`; KPI cards, Expiry Monitoring, FEFO Compliance, Recent Stock Audits, and Activity Log live; Generate Report and advanced filters disabled; View links route to `/audit/:auditId` placeholder until BK; `smoke:m6bj`, web lint, and web build PASS. Next = **Authorize M6 Batch BK** (ask for Audit Detail + Review modal decision first). |
 
