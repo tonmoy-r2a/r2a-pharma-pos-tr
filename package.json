@@ -22,6 +22,7 @@
     "smoke:m6s6": "npm run smoke:m6s6 -w @r2a/web"
   },
   "devDependencies": {
+    "@types/node": "^20.19.43",
     "turbo": "^2.5.4",
     "typescript": "^5.8.3"
   },
