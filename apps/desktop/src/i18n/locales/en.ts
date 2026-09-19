@@ -63,6 +63,55 @@ export const en = {
   "settings.receiveStockRefreshRecovered": "Catalog refreshed. Current stock is ready.",
   "settings.receiveStockChangeBatch": "Change lot",
   "settings.receiveStockFooter": "↑/↓ Fields · Enter Save",
+  "settings.stockAudit": "Stock Audit",
+  "settings.stockAuditHelp":
+    "Start a physical count, record counted lot quantities, and submit for Owner review. Owner and Manager only. Online required.",
+  "settings.stockAudit.offline":
+    "Stock audit requires an online connection. Go Online and try again.",
+  "settings.stockAudit.location": "Count location",
+  "settings.stockAudit.locationPlaceholder": "e.g. Front counter shelf",
+  "settings.stockAudit.notes": "Notes (optional)",
+  "settings.stockAudit.notesPlaceholder": "Optional note for this count",
+  "settings.stockAudit.start": "Start count",
+  "settings.stockAudit.starting": "Starting…",
+  "settings.stockAudit.startFooter": "↑/↓ Fields · Enter Start · Esc Back",
+  "settings.stockAudit.needLocation": "Enter a count location.",
+  "settings.stockAudit.started": "Audit {auditNo} started.",
+  "settings.stockAudit.startFailed": "Could not start the audit.",
+  "settings.stockAudit.countHint":
+    "Search a product, pick a lot, enter counted pieces, then save or submit.",
+  "settings.stockAudit.product": "Product",
+  "settings.stockAudit.productPlaceholder": "Type a name (e.g. Napa)",
+  "settings.stockAudit.searching": "Searching…",
+  "settings.stockAudit.searchFailed": "Product search failed.",
+  "settings.stockAudit.changeProduct": "Change product",
+  "settings.stockAudit.loadingBatches": "Loading lots…",
+  "settings.stockAudit.batchesFailed": "Could not load lots.",
+  "settings.stockAudit.noBatches": "No lots for this product.",
+  "settings.stockAudit.systemQty": "System",
+  "settings.stockAudit.countedQty": "Counted (PIECE)",
+  "settings.stockAudit.needBatch": "Select a lot.",
+  "settings.stockAudit.needQty": "Enter counted quantity as a whole number (0 or more).",
+  "settings.stockAudit.addLine": "Add to count",
+  "settings.stockAudit.lineAdded": "Lot added to count.",
+  "settings.stockAudit.linesTitle": "Counted lots",
+  "settings.stockAudit.linesCount": "lots",
+  "settings.stockAudit.discrepancies": "discrepancies",
+  "settings.stockAudit.noLines": "No lots counted yet.",
+  "settings.stockAudit.needLines": "Add at least one counted lot before saving.",
+  "settings.stockAudit.saveCounts": "Save counts",
+  "settings.stockAudit.linesSaved": "Counts saved to the cloud.",
+  "settings.stockAudit.saveFailed": "Could not save counts.",
+  "settings.stockAudit.submit": "Submit for review",
+  "settings.stockAudit.submitting": "Submitting…",
+  "settings.stockAudit.submitted": "Audit {auditNo} submitted for Owner review.",
+  "settings.stockAudit.submitFailed": "Could not submit the audit.",
+  "settings.stockAudit.submittedTitle": "Submitted {auditNo}",
+  "settings.stockAudit.submittedHint":
+    "Status {status} · {items} lots. Review continues on Owner web Audit.",
+  "settings.stockAudit.startAnother": "Start another count",
+  "settings.stockAudit.countFooter":
+    "↑/↓ Lists · Enter Pick/Add · Del Remove line · Esc Back",
   "settings.connectivity": "Connectivity",
   "settings.interfaceLanguage": "Interface Language",
   "settings.interfaceLanguageHelp":
@@ -104,8 +153,10 @@ export const en = {
 
   "txns.title": "Transactions",
   "txns.subtitle": "Recent sales on this terminal (local log).",
+  "txns.subtitleCloud": "Store sales from cloud (local pending sync included).",
   "txns.detailTitle": "Transaction detail",
   "txns.detailSubtitle": "Items, settlement, and receipt reprint.",
+  "txns.detailLoading": "Loading sale from cloud…",
   "txns.close": "Close Transactions",
   "txns.backToList": "Back to list",
   "txns.listLabel": "Recent transactions",
@@ -117,7 +168,12 @@ export const en = {
   "txns.openDetail": "Open",
   "txns.empty": "No transactions yet",
   "txns.emptyHint":
-    "Completed sales on this terminal appear here. Cloud sales history will connect when a list API is available.",
+    "Completed sales on this terminal appear here while offline.",
+  "txns.emptyHintCloud":
+    "Completed store sales appear here when online. Offline sales show after you complete them on this terminal.",
+  "txns.loading": "Loading transactions…",
+  "txns.cloudFailed":
+    "Could not load cloud sales — showing local log only.",
   "txns.listFooter": "↑/↓ Navigate · Enter Open · Esc Close",
   "txns.detailFooter": "←/→ Actions · Esc Back to list",
   "txns.methodLoyalty": "Loyalty",
@@ -248,11 +304,15 @@ export const en = {
   "shift.openFailed": "Failed to open shift",
   "shift.closeFailed": "Failed to close shift",
   "shift.fetchFailed": "Failed to load active shift",
+  "shift.alreadyOpen": "An open shift already exists for this store.",
   "shift.openShiftConfirmTitle": "Open shift?",
   "shift.openShiftConfirmBody":
     "This will open a cloud shift with the entered float. A shift must be open to start sales.",
   "shift.closeShiftBalanced": "Shift closed — balanced",
   "shift.closeShiftFlagged": "Shift closed — variance ৳{variance}",
+  "shift.cashCount.bannerTitle": "Cash count requested",
+  "shift.cashCount.bannerBody": "Enter counted cash and close the shift.",
+  "shift.cashCount.openShiftPanel": "Open Shift panel",
 
   "cart.activeCart": "Active Cart",
   "cart.item": "Item",
@@ -754,6 +814,8 @@ export const en = {
   "hold.atCapacity":
     "Already holding {max} sales. Resume or discard one first.",
   "hold.parked": "Sale held. Start the next customer.",
+  "hold.parkedCloud": "Sale held for this store. Start the next customer.",
+  "hold.cloudFailed": "Could not sync the held sale. Check connection and try again.",
   "hold.resumeCartNotEmpty":
     "Hold or clear the current sale before resuming a held sale.",
   "hold.resumed": "Held sale restored.",
@@ -768,6 +830,8 @@ export const en = {
   "hold.busy": "Wait for the current sale to finish before holding.",
   "hold.title": "Held Sales",
   "hold.subtitle": "{count}/{max} parked on this terminal · stock is not reserved",
+  "hold.subtitleCloud":
+    "{count}/{max} parked for this store · stock is not reserved",
   "hold.close": "Close held sales",
   "hold.listLabel": "Held sales",
   "hold.empty": "No held sales",
@@ -783,6 +847,8 @@ export const en = {
   "hold.discardTitle": "Discard held sale?",
   "hold.discardBody":
     "This removes the parked sale from this terminal. It is not charged.",
+  "hold.discardBodyCloud":
+    "This removes the parked sale for the whole store. It is not charged.",
   "hold.discardWarn":
     "Soft hold only — stock was never reserved.",
   "hold.keepHeld": "Keep Held",

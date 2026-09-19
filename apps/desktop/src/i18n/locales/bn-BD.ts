@@ -65,6 +65,55 @@ export const bnBD = {
   "settings.receiveStockRefreshRecovered": "ক্যাটালগ রিফ্রেশ হয়েছে। বর্তমান স্টক প্রস্তুত।",
   "settings.receiveStockChangeBatch": "লট পরিবর্তন",
   "settings.receiveStockFooter": "↑/↓ ক্ষেত্র · Enter সংরক্ষণ",
+  "settings.stockAudit": "স্টক অডিট",
+  "settings.stockAuditHelp":
+    "ফিজিক্যাল কাউন্ট শুরু করুন, লটের গণনা লিখুন এবং মালিকের রিভিউয়ের জন্য জমা দিন। শুধু মালিক ও ম্যানেজার। অনলাইন লাগবে।",
+  "settings.stockAudit.offline":
+    "স্টক অডিটের জন্য অনলাইন সংযোগ লাগবে। অনলাইনে যান এবং আবার চেষ্টা করুন।",
+  "settings.stockAudit.location": "কাউন্ট লোকেশন",
+  "settings.stockAudit.locationPlaceholder": "যেমন সামনের কাউন্টার শেলফ",
+  "settings.stockAudit.notes": "নোট (ঐচ্ছিক)",
+  "settings.stockAudit.notesPlaceholder": "এই কাউন্টের জন্য ঐচ্ছিক নোট",
+  "settings.stockAudit.start": "কাউন্ট শুরু",
+  "settings.stockAudit.starting": "শুরু হচ্ছে…",
+  "settings.stockAudit.startFooter": "↑/↓ ক্ষেত্র · Enter শুরু · Esc ফিরুন",
+  "settings.stockAudit.needLocation": "কাউন্ট লোকেশন লিখুন।",
+  "settings.stockAudit.started": "অডিট {auditNo} শুরু হয়েছে।",
+  "settings.stockAudit.startFailed": "অডিট শুরু করা যায়নি।",
+  "settings.stockAudit.countHint":
+    "পণ্য খুঁজুন, লট বেছে নিন, গণনা লিখুন, তারপর সংরক্ষণ বা জমা দিন।",
+  "settings.stockAudit.product": "পণ্য",
+  "settings.stockAudit.productPlaceholder": "নাম লিখুন (যেমন Napa)",
+  "settings.stockAudit.searching": "খোঁজা হচ্ছে…",
+  "settings.stockAudit.searchFailed": "পণ্য খোঁজা ব্যর্থ।",
+  "settings.stockAudit.changeProduct": "পণ্য পরিবর্তন",
+  "settings.stockAudit.loadingBatches": "লট লোড হচ্ছে…",
+  "settings.stockAudit.batchesFailed": "লট লোড করা যায়নি।",
+  "settings.stockAudit.noBatches": "এই পণ্যের কোনো লট নেই।",
+  "settings.stockAudit.systemQty": "সিস্টেম",
+  "settings.stockAudit.countedQty": "গণনা (PIECE)",
+  "settings.stockAudit.needBatch": "একটি লট নির্বাচন করুন।",
+  "settings.stockAudit.needQty": "সম্পূর্ণ সংখ্যায় গণনা লিখুন (0 বা তার বেশি)।",
+  "settings.stockAudit.addLine": "কাউন্টে যোগ করুন",
+  "settings.stockAudit.lineAdded": "লট কাউন্টে যোগ হয়েছে।",
+  "settings.stockAudit.linesTitle": "গণনা করা লট",
+  "settings.stockAudit.linesCount": "লট",
+  "settings.stockAudit.discrepancies": "অমিল",
+  "settings.stockAudit.noLines": "এখনো কোনো লট গণনা হয়নি।",
+  "settings.stockAudit.needLines": "সংরক্ষণের আগে অন্তত একটি লট যোগ করুন।",
+  "settings.stockAudit.saveCounts": "গণনা সংরক্ষণ",
+  "settings.stockAudit.linesSaved": "গণনা ক্লাউডে সংরক্ষিত।",
+  "settings.stockAudit.saveFailed": "গণনা সংরক্ষণ করা যায়নি।",
+  "settings.stockAudit.submit": "রিভিউয়ের জন্য জমা",
+  "settings.stockAudit.submitting": "জমা হচ্ছে…",
+  "settings.stockAudit.submitted": "অডিট {auditNo} মালিকের রিভিউয়ের জন্য জমা হয়েছে।",
+  "settings.stockAudit.submitFailed": "অডিট জমা দেওয়া যায়নি।",
+  "settings.stockAudit.submittedTitle": "জমা হয়েছে {auditNo}",
+  "settings.stockAudit.submittedHint":
+    "স্থিতি {status} · {items} লট। রিভিউ Owner web অডিটে চলবে।",
+  "settings.stockAudit.startAnother": "আরেকটি কাউন্ট শুরু",
+  "settings.stockAudit.countFooter":
+    "↑/↓ তালিকা · Enter বেছে নিন/যোগ · Del সারি মুছুন · Esc ফিরুন",
   "settings.connectivity": "সংযোগ",
   "settings.interfaceLanguage": "ইন্টারফেসের ভাষা",
   "settings.interfaceLanguageHelp":
@@ -106,8 +155,10 @@ export const bnBD = {
 
   "txns.title": "লেনদেন",
   "txns.subtitle": "এই টার্মিনালের সাম্প্রতিক বিক্রয় (স্থানীয় লগ)।",
+  "txns.subtitleCloud": "ক্লাউড থেকে স্টোর বিক্রয় (স্থানীয় পেন্ডিং সিঙ্কসহ)।",
   "txns.detailTitle": "লেনদেনের বিবরণ",
   "txns.detailSubtitle": "আইটেম, সেটেলমেন্ট এবং রসিদ পুনরায় প্রিন্ট।",
+  "txns.detailLoading": "ক্লাউড থেকে বিক্রয় লোড হচ্ছে…",
   "txns.close": "লেনদেন বন্ধ করুন",
   "txns.backToList": "তালিকায় ফিরে যান",
   "txns.listLabel": "সাম্প্রতিক লেনদেন",
@@ -119,7 +170,12 @@ export const bnBD = {
   "txns.openDetail": "খুলুন",
   "txns.empty": "এখনো কোনো লেনদেন নেই",
   "txns.emptyHint":
-    "এই টার্মিনালে সম্পন্ন বিক্রয় এখানে দেখা যাবে। ক্লাউড তালিকা API এলে সংযুক্ত হবে।",
+    "অফলাইনে এই টার্মিনালে সম্পন্ন বিক্রয় এখানে দেখা যাবে।",
+  "txns.emptyHintCloud":
+    "অনলাইনে স্টোরের সম্পন্ন বিক্রয় এখানে দেখা যায়। অফলাইন বিক্রয় এই টার্মিনালে সম্পন্ন হলে দেখাবে।",
+  "txns.loading": "লেনদেন লোড হচ্ছে…",
+  "txns.cloudFailed":
+    "ক্লাউড বিক্রয় লোড করা যায়নি — শুধু স্থানীয় লগ দেখানো হচ্ছে।",
   "txns.listFooter": "↑/↓ নেভিগেট · Enter খুলুন · Esc বন্ধ",
   "txns.detailFooter": "←/→ অ্যাকশন · Esc তালিকায় ফিরে যান",
   "txns.methodLoyalty": "লয়ালটি",
@@ -253,11 +309,15 @@ export const bnBD = {
   "shift.openFailed": "শিফট খোলা ব্যর্থ হয়েছে",
   "shift.closeFailed": "শিফট বন্ধ করা ব্যর্থ হয়েছে",
   "shift.fetchFailed": "সক্রিয় শিফট লোড করা ব্যর্থ হয়েছে",
+  "shift.alreadyOpen": "এই স্টোরে ইতিমধ্যে একটি খোলা শিফট আছে।",
   "shift.openShiftConfirmTitle": "শিফট খুলবেন?",
   "shift.openShiftConfirmBody":
     "এটি প্রবেশ করা ফ্লোট দিয়ে একটি ক্লাউড শিফট খুলবে। বিক্রয় শুরু করতে একটি শিফট খোলা থাকা প্রয়োজন।",
   "shift.closeShiftBalanced": "শিফট বন্ধ — সমান",
   "shift.closeShiftFlagged": "শিফট বন্ধ — পার্থক্য ৳{variance}",
+  "shift.cashCount.bannerTitle": "ক্যাশ কাউন্ট অনুরোধ",
+  "shift.cashCount.bannerBody": "গণনাকৃত নগদ লিখে শিফট বন্ধ করুন।",
+  "shift.cashCount.openShiftPanel": "শিফট প্যানেল খুলুন",
 
   "cart.activeCart": "সক্রিয় কার্ট",
   "cart.item": "আইটেম",
@@ -763,6 +823,10 @@ export const bnBD = {
   "hold.atCapacity":
     "ইতিমধ্যে {max}টি বিক্রয় হোল্ড আছে। আগে একটি রিজিউম বা বাতিল করুন।",
   "hold.parked": "বিক্রয় হোল্ড হয়েছে। পরবর্তী গ্রাহক শুরু করুন।",
+  "hold.parkedCloud":
+    "বিক্রয় এই স্টোরের জন্য হোল্ড হয়েছে। পরবর্তী গ্রাহক শুরু করুন।",
+  "hold.cloudFailed":
+    "হোল্ড সিঙ্ক করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।",
   "hold.resumeCartNotEmpty":
     "হোল্ড করা বিক্রয় ফেরানোর আগে বর্তমান বিক্রয় হোল্ড বা মুছুন।",
   "hold.resumed": "হোল্ড করা বিক্রয় ফেরানো হয়েছে।",
@@ -779,6 +843,8 @@ export const bnBD = {
   "hold.title": "হোল্ড করা বিক্রয়",
   "hold.subtitle":
     "{count}/{max} এই টার্মিনালে পার্ক করা · স্টক সংরক্ষিত নয়",
+  "hold.subtitleCloud":
+    "{count}/{max} এই স্টোরের জন্য পার্ক করা · স্টক সংরক্ষিত নয়",
   "hold.close": "হোল্ড তালিকা বন্ধ করুন",
   "hold.listLabel": "হোল্ড করা বিক্রয়",
   "hold.empty": "কোনো হোল্ড করা বিক্রয় নেই",
@@ -794,6 +860,8 @@ export const bnBD = {
   "hold.discardTitle": "হোল্ড করা বিক্রয় বাতিল করবেন?",
   "hold.discardBody":
     "এতে এই টার্মিনাল থেকে পার্ক করা বিক্রয় মুছে যাবে। চার্জ হয়নি।",
+  "hold.discardBodyCloud":
+    "এতে পুরো স্টোর থেকে পার্ক করা বিক্রয় মুছে যাবে। চার্জ হয়নি।",
   "hold.discardWarn": "শুধু সফট হোল্ড — স্টক কখনো সংরক্ষিত হয়নি।",
   "hold.keepHeld": "হোল্ড রাখুন",
   "hold.footer":

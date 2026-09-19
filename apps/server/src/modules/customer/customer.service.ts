@@ -118,13 +118,35 @@ export async function updateCustomer(
     throw new AppError("Customer not found", 404);
   }
 
+  if (existing.status === "PENDING_APPROVAL" || existing.status === "REJECTED") {
+    throw new AppError(
+      "Pending or rejected customers cannot be edited via PATCH — use approve/reject",
+      400,
+    );
+  }
+
+  if (input.status !== undefined) {
+    if (existing.status !== "ACTIVE" && existing.status !== "INACTIVE") {
+      throw new AppError("Illegal customer status transition", 400);
+    }
+    if (input.status !== "ACTIVE" && input.status !== "INACTIVE") {
+      throw new AppError("Illegal customer status transition", 400);
+    }
+  }
+
   try {
     const customer = await prisma.customer.update({
       where: { id: customerId },
       data: {
-        name: input.name,
-        phone: input.phone,
-        email: input.email,
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.phone !== undefined ? { phone: input.phone } : {}),
+        ...(input.email !== undefined ? { email: input.email } : {}),
+        ...(input.dateOfBirth !== undefined
+          ? { dateOfBirth: input.dateOfBirth }
+          : {}),
+        ...(input.gender !== undefined ? { gender: input.gender } : {}),
+        ...(input.address !== undefined ? { address: input.address } : {}),
+        ...(input.status !== undefined ? { status: input.status } : {}),
       },
     });
     return serializeCustomer(customer);

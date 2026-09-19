@@ -6,6 +6,7 @@ import {
   Package,
   ReceiptText,
   ShoppingCart,
+  TrendingUp,
   UsersRound,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -198,24 +199,34 @@ function ReportsBody({ data }: { data: ReportsData }) {
             <SalesBarChart bars={dashboard.dailyBars} />
           </section>
 
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <ReportCard
               icon={<ReceiptText className="size-4 text-primary" strokeWidth={1.75} />}
               title={t("reports.cards.sales.title")}
               body={t("reports.cards.sales.body")}
-              disabledLabel={t("reports.viewReport")}
+              ctaLabel={t("reports.viewReport")}
+              href="/reports/sales"
             />
             <ReportCard
               icon={<Package className="size-4 text-indigo-600" strokeWidth={1.75} />}
               title={t("reports.cards.inventory.title")}
               body={t("reports.cards.inventory.body")}
-              disabledLabel={t("reports.viewReport")}
+              ctaLabel={t("reports.viewReport")}
+              href="/reports/inventory"
             />
             <ReportCard
               icon={<ShoppingCart className="size-4 text-blue-600" strokeWidth={1.75} />}
               title={t("reports.cards.purchase.title")}
               body={t("reports.cards.purchase.body")}
-              disabledLabel={t("reports.viewReport")}
+              ctaLabel={t("reports.viewReport")}
+              href="/reports/purchasing"
+            />
+            <ReportCard
+              icon={<TrendingUp className="size-4 text-teal-700" strokeWidth={1.75} />}
+              title={t("reports.cards.productMovement.title")}
+              body={t("reports.cards.productMovement.body")}
+              ctaLabel={t("reports.viewReport")}
+              href="/reports/product-movement"
             />
           </section>
 
@@ -256,7 +267,7 @@ function ReportsBody({ data }: { data: ReportsData }) {
               [t("reports.inventory.outOfStock"), formatCount(inventory.outOfStockCount)],
             ]}
             cta={t("reports.inventory.view")}
-            disabled
+            onClick={() => navigate("/reports/inventory")}
           />
           <SummaryCard
             title={t("reports.purchasing.title")}
@@ -267,7 +278,7 @@ function ReportsBody({ data }: { data: ReportsData }) {
               [t("reports.purchasing.pending"), formatCount(purchasing.kpis.byStatus.SENT + purchasing.kpis.byStatus.PARTIALLY_RECEIVED)],
             ]}
             cta={t("reports.purchasing.view")}
-            disabled
+            onClick={() => navigate("/reports/purchasing")}
           />
           <SummaryCard
             title={t("reports.shift.title")}
@@ -380,10 +391,22 @@ function SalesBarChart({ bars }: { bars: OwnerDashboardPayload["dailyBars"] }) {
   );
 }
 
-function ReportCard({ icon, title, body, disabledLabel }: { icon: ReactNode; title: string; body: string; disabledLabel: string }) {
+function ReportCard({
+  icon,
+  title,
+  body,
+  ctaLabel,
+  href,
+}: {
+  icon: ReactNode;
+  title: string;
+  body: string;
+  ctaLabel: string;
+  href?: string;
+}) {
   const { t } = useLocale();
   const { navigate } = useOwnerPath();
-  const isSalesReport = title === t("reports.cards.sales.title");
+  const enabled = Boolean(href);
   return (
     <article className="rounded-xl border border-border bg-surface p-4">
       <div className="mb-3 flex size-9 items-center justify-center rounded-lg bg-slate-50">
@@ -393,17 +416,17 @@ function ReportCard({ icon, title, body, disabledLabel }: { icon: ReactNode; tit
       <p className="mt-2 min-h-[2.5rem] text-xs leading-relaxed text-muted">{body}</p>
       <button
         type="button"
-        disabled={!isSalesReport}
-        aria-disabled={!isSalesReport ? "true" : undefined}
-        title={!isSalesReport ? t("reports.disabledHint") : undefined}
+        disabled={!enabled}
+        aria-disabled={!enabled ? "true" : undefined}
+        title={!enabled ? t("reports.disabledHint") : undefined}
         className={`mt-3 inline-flex items-center gap-1 text-xs font-medium ${
-          isSalesReport
+          enabled
             ? "text-primary hover:underline"
             : "cursor-not-allowed text-muted"
         }`}
-        onClick={isSalesReport ? () => navigate("/reports/sales") : undefined}
+        onClick={enabled && href ? () => navigate(href) : undefined}
       >
-        {disabledLabel}
+        {ctaLabel}
         <ArrowRight className="size-3.5" strokeWidth={1.75} />
       </button>
     </article>

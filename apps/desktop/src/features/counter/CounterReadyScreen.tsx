@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 import {
+  AlertTriangle,
   BarChart3,
   CalendarDays,
   Cloud,
@@ -11,7 +13,7 @@ import {
 import { useAuth } from "@/features/auth";
 import { useLocale, type MessageKey } from "@/i18n";
 import { formatTaka } from "@/lib/format";
-import { formatShiftClock, shiftStore } from "@/lib/shiftStore";
+import { formatShiftClock, shiftStore, type ActiveShift } from "@/lib/shiftStore";
 import {
   useConnectivity,
   type ConnectivityBadgeState,
@@ -24,6 +26,8 @@ export type CounterReadyScreenProps = {
    * localStorage without a full remount.
    */
   shiftEpoch?: number;
+  /** Opens Shift panel so cashier can enter counted cash (Prod P10). */
+  onOpenShift?: () => void;
 };
 
 /** Stub today totals until sales API wiring is authorized. */
@@ -37,19 +41,57 @@ const TODAY_AMOUNT_STUB = 1240.5;
 export function CounterReadyScreen({
   onNewSale,
   shiftEpoch = 0,
+  onOpenShift,
 }: CounterReadyScreenProps) {
-  const { badgeState, pendingCount } = useConnectivity();
-  const { user } = useAuth();
+  const { badgeState, pendingCount, isOnline } = useConnectivity();
+  const { user, cashierLabel } = useAuth();
   const { t } = useLocale();
   const sync = localSyncVisual(badgeState);
   const syncLabel = localSyncLabel(badgeState, pendingCount, t);
 
+  const [activeShift, setActiveShift] = useState<ActiveShift | null>(null);
+
   // shiftEpoch forces re-read after Shift panel mutates localStorage.
-  void shiftEpoch;
-  const activeShift =
-    user?.tenantId != null
-      ? shiftStore.get(user.tenantId, user.storeId ?? null)
-      : null;
+  useEffect(() => {
+    if (!user?.tenantId) {
+      setActiveShift(null);
+      return;
+    }
+    const storeId = user.storeId ?? null;
+    setActiveShift(shiftStore.get(user.tenantId, storeId));
+  }, [user?.tenantId, user?.storeId, shiftEpoch]);
+
+  // Prod P10 — poll cloud for cash-count request while online with an open shift.
+  useEffect(() => {
+    if (!user?.tenantId || !isOnline) return;
+    const storeId = user.storeId ?? null;
+    const name = cashierLabel || user.name || user.email || "Cashier";
+    let cancelled = false;
+    const tick = () => {
+      void shiftStore
+        .refreshCashCountFlag(user.tenantId, storeId, name, user.id)
+        .then((next) => {
+          if (cancelled) return;
+          setActiveShift(next);
+        });
+    };
+    tick();
+    const id = window.setInterval(tick, 20_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [
+    user?.tenantId,
+    user?.storeId,
+    user?.id,
+    user?.name,
+    user?.email,
+    cashierLabel,
+    isOnline,
+    shiftEpoch,
+  ]);
+
   const activeShiftValue = activeShift
     ? `${t("counter.shiftOpenSince").replace(
         "{time}",
@@ -69,6 +111,36 @@ export function CounterReadyScreen({
           {t("counter.readyTitle")}
         </h1>
         <p className="mt-2 text-sm text-muted">{t("counter.readySubtitle")}</p>
+
+        {activeShift?.cashCountRequested ? (
+          <div className="mt-5 w-full max-w-lg rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-left text-sm text-amber-950">
+            <div className="flex items-start gap-2">
+              <AlertTriangle
+                className="mt-0.5 size-4 shrink-0 text-amber-700"
+                strokeWidth={1.75}
+                aria-hidden
+              />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">{t("shift.cashCount.bannerTitle")}</p>
+                <p className="mt-1 text-xs text-amber-900">
+                  {t("shift.cashCount.bannerBody")}
+                </p>
+                {activeShift.cashCountNote ? (
+                  <p className="mt-1 text-xs text-amber-800">{activeShift.cashCountNote}</p>
+                ) : null}
+                {onOpenShift ? (
+                  <button
+                    type="button"
+                    className="mt-2 inline-flex items-center rounded-md bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-800"
+                    onClick={onOpenShift}
+                  >
+                    {t("shift.cashCount.openShiftPanel")}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <button
           type="button"

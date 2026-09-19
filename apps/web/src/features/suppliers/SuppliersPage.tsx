@@ -35,7 +35,7 @@ type StatusFilter = "ALL" | SupplierStatus;
 /**
  * Suppliers directory (Batch X). Content region only — chrome is Batch B.
  * Live GET /owner/suppliers. Expiry Returns + Add Supplier navigate to
- * registered subpaths; Review All Issues stays disabled (Batch AA).
+ * registered subpaths; Review All Issues → `/suppliers/issues` (Prod P9).
  */
 export function SuppliersPage() {
   const { t } = useLocale();
@@ -442,10 +442,8 @@ function SupplierAttentionPanel({
       </ul>
       <button
         type="button"
-        disabled
-        aria-disabled="true"
-        title={t("suppliers.attention.reviewAllSoon")}
-        className="mt-3 flex w-full cursor-not-allowed items-center justify-center rounded-lg border border-border bg-canvas px-3 py-2 text-sm font-medium text-muted"
+        className="mt-3 flex w-full items-center justify-center rounded-lg border border-border bg-canvas px-3 py-2 text-sm font-medium text-foreground hover:bg-surface"
+        onClick={() => onNavigate("/suppliers/issues")}
       >
         {t("suppliers.attention.reviewAll")}
       </button>

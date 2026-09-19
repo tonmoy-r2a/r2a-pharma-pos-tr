@@ -3,6 +3,7 @@ import {
   shiftOpenSchema,
   shiftCloseSchema,
   shiftResolveSchema,
+  shiftCashCountRequestSchema,
   ownerShiftListQuerySchema,
   shiftIdParamSchema,
 } from "@r2a/shared-types";
@@ -60,4 +61,17 @@ ownerShiftRouter.post(
   "/:shiftId/resolve",
   validate({ params: shiftIdParamSchema, body: shiftResolveSchema }),
   shiftController.resolve,
+);
+
+/** Prod P10 — Request Cash Count on an OPEN shift. */
+ownerShiftRouter.post(
+  "/:shiftId/cash-count-request",
+  validate({ params: shiftIdParamSchema, body: shiftCashCountRequestSchema }),
+  shiftController.requestCashCount,
+);
+
+ownerShiftRouter.post(
+  "/:shiftId/cash-count-request/cancel",
+  validate({ params: shiftIdParamSchema }),
+  shiftController.cancelCashCount,
 );

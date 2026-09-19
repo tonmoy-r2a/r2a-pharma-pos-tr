@@ -3,6 +3,7 @@ import type {
   ShiftOpenInput,
   ShiftCloseInput,
   ShiftResolveInput,
+  ShiftCashCountRequestInput,
   OwnerShiftListQuery,
   ShiftPaymentBreakdown,
 } from "@r2a/shared-types";
@@ -47,6 +48,16 @@ async function activeShift(
   return prisma.shift.findFirst({
     where: { tenantId, storeId, userId, status: "OPEN" },
     orderBy: { openedAt: "desc" },
+  });
+}
+
+async function findOwnerShift(ctx: TenantContext, shiftId: string) {
+  return prisma.shift.findFirst({
+    where: {
+      id: shiftId,
+      tenantId: ctx.tenantId,
+      ...(ctx.storeId ? { storeId: ctx.storeId } : {}),
+    },
   });
 }
 
@@ -109,14 +120,24 @@ export async function closeShift(
     (input.countedCash - (Number(shift.openingFloat) + Number(shift.cashSales))).toFixed(2),
   );
 
+  const now = new Date();
+  const cashCountComplete =
+    shift.cashCountStatus === "REQUESTED"
+      ? {
+          cashCountStatus: "COMPLETED" as const,
+          cashCountCompletedAt: now,
+        }
+      : {};
+
   const closed = await prisma.shift.update({
     where: { id: shift.id },
     data: {
       status: variance === 0 ? "CLOSED" : "FLAGGED",
-      closedAt: new Date(),
+      closedAt: now,
       countedCash: input.countedCash,
       expectedCash: Number((Number(shift.openingFloat) + Number(shift.cashSales)).toFixed(2)),
       variance,
+      ...cashCountComplete,
     },
   });
 
@@ -258,6 +279,89 @@ export async function resolveVariance(
       shiftId,
       type: "VARIANCE_REVIEWED",
       note: `Variance ${input.varianceDecision}: ${input.varianceNote ?? "N/A"}`,
+    },
+  });
+
+  return updated;
+}
+
+/** Prod P10 — Owner requests cash count on an OPEN shift. */
+export async function requestCashCount(
+  ctx: TenantContext,
+  shiftId: string,
+  input: ShiftCashCountRequestInput,
+) {
+  const shift = await findOwnerShift(ctx, shiftId);
+  if (!shift) throw new AppError("Shift not found", 404);
+  if (shift.status !== "OPEN") {
+    throw new AppError("Cash count can only be requested on an open shift", 400);
+  }
+  if (shift.cashCountStatus === "REQUESTED") {
+    throw new AppError("Cash count already requested for this shift", 409);
+  }
+
+  const now = new Date();
+  const note = input.note?.trim() || null;
+
+  const updated = await prisma.shift.update({
+    where: { id: shift.id },
+    data: {
+      cashCountStatus: "REQUESTED",
+      cashCountRequestedAt: now,
+      cashCountRequestedByUserId: ctx.userId,
+      cashCountNote: note,
+      cashCountCancelledAt: null,
+      cashCountCompletedAt: null,
+    },
+    include: { user: { select: { id: true, name: true } } },
+  });
+
+  await prisma.shiftActivityEvent.create({
+    data: {
+      tenantId: ctx.tenantId,
+      userId: shift.userId,
+      actorUserId: ctx.userId,
+      shiftId: shift.id,
+      type: "CASH_COUNT_REQUESTED",
+      note: note ? `Cash count requested: ${note}` : "Cash count requested",
+    },
+  });
+
+  return updated;
+}
+
+/** Prod P10 — Owner cancels a pending cash-count request. */
+export async function cancelCashCountRequest(
+  ctx: TenantContext,
+  shiftId: string,
+) {
+  const shift = await findOwnerShift(ctx, shiftId);
+  if (!shift) throw new AppError("Shift not found", 404);
+  if (shift.cashCountStatus !== "REQUESTED") {
+    throw new AppError("No pending cash count request on this shift", 400);
+  }
+  if (shift.status !== "OPEN") {
+    throw new AppError("Cannot cancel cash count on a closed shift", 400);
+  }
+
+  const now = new Date();
+  const updated = await prisma.shift.update({
+    where: { id: shift.id },
+    data: {
+      cashCountStatus: "CANCELLED",
+      cashCountCancelledAt: now,
+    },
+    include: { user: { select: { id: true, name: true } } },
+  });
+
+  await prisma.shiftActivityEvent.create({
+    data: {
+      tenantId: ctx.tenantId,
+      userId: shift.userId,
+      actorUserId: ctx.userId,
+      shiftId: shift.id,
+      type: "CASH_COUNT_CANCELLED",
+      note: "Cash count request cancelled",
     },
   });
 

@@ -6,9 +6,9 @@
 **API catalog:** [`Completed_API_lists.md`](Completed_API_lists.md)  
 **RBAC contract:** [`ROLES_AND_PERMISSIONS.md`](ROLES_AND_PERMISSIONS.md) (v2.0.0)  
 **Authorized plans:** [`.cursor/plans/m6_slice_1_owner_33de6430.plan.md`](.cursor/plans/m6_slice_1_owner_33de6430.plan.md) (Slice 1) · Slice 3 Customers plan (2026-08-19) · [`.cursor/plans/m6_slice_4_staff_e508519b.plan.md`](.cursor/plans/m6_slice_4_staff_e508519b.plan.md) (Slice 4 Staff, 2026-08-21) · [`.cursor/plans/m6_slice_5_shifts_d501783e.plan.md`](.cursor/plans/m6_slice_5_shifts_d501783e.plan.md) (Slice 5 Shifts + Reports, 2026-08-22) · [`.cursor/plans/m6_slice_6_execution.plan.md`](.cursor/plans/m6_slice_6_execution.plan.md) (Slices 6–8, 2026-08-22).
-**Status of M6:** **IN PROGRESS** — Slices 1–5 **DONE** (AW–BD). Slice 6 **BE DONE**; BF–BQ continue in [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md). Manager web, n8n, RLS, bi-di stay unauthorized.
-**Prerequisite:** Milestone 0–**5**, Owner Web Slices 1–5 **DONE** for Slice 6+.
-**Do not start:** Slice 6+ batches without explicit per-batch authorization — use **[`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md)** (not this whole file). Slice 6 BE is done; next is BF. Slice 2 AC/AD (deferred), Manager web, bi-di, n8n, RLS, M7 POS/hardware — unless re-authorized.
+**Status of M6:** **IN PROGRESS** — Slices 1–5 **DONE** (AW–BD). Slices 6–8 continue in [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md) (BM–BQ DONE). Slice 2 **P–AD DONE**. Production track next = Wave 3 `Authorize Prod Batch P1`. Manager web, n8n, RLS, bi-di stay unauthorized.  
+**Prerequisite:** Milestone 0–**5**, Owner Web Slices 1–5 **DONE** for Slice 6+.  
+**Do not start:** Slice 6+ / AC without explicit per-batch authorization. Production track: [`PRODUCTION_REMAINING_EXECUTION.md`](PRODUCTION_REMAINING_EXECUTION.md). Out of scope unless re-authorized: Manager web, bi-di, n8n, RLS, M7.
 
 ---
 
@@ -110,10 +110,10 @@ Then stop. After you share (or say use prior), implement that batch only.
 | 15 | **Supplier Details** | Z |
 | 16 | **Expiry Returns** | AA |
 | 17 | **Create Return Manifest** | AB — **no screenshot yet; stop and ask** |
-| 18 | **Return Manifest Details** | AC — **DEFERRED** (placeholder remains) |
-| — | **Record Supplier Return Dispatch** | AC modal — **DEFERRED** |
-| — | **Record Supplier Decision** | AC modal — **DEFERRED** |
-| — | **Complete Return** | AC modal — **DEFERRED** |
+| 18 | **Return Manifest Details** | AC — **DONE** |
+| — | **Record Supplier Return Dispatch** | AC modal — **DONE** |
+| — | **Record Supplier Decision** | AC modal — **DONE** |
+| — | **Complete Return** | AC modal — **DONE** |
 
 **Slice 3 screen names (exact labels):**
 
@@ -270,14 +270,14 @@ This section records that `PROJECT_MASTER_PLAN.md`, `Current_Status.md`, `Comple
 | Ingest | **Batch D DONE** — `receiptNo`, cost snapshot, loyalty, FEFO flags, `InventoryEvent` SALE/RECEIVE/ADJUST |
 | Loyalty | Session calc on POS; **Batch D** snapshots `loyaltyUsed`/`loyaltyEarned` on ingest when present |
 | FEFO override | POS PIN stub unchanged; ingest persists `fefoOverride` + `fefoAuthorizedByName` (notes still kept) |
-| Supplier / PO / returns | **Batch R APIs live:** OWNER-only Supplier/PO, confirmed GRN, return queue, and manifest lifecycle APIs. No Slice 2 UI yet. Batch keeps denormalized `supplierName` + `returnStatus` and optional `supplierId`. |
+| Supplier / PO / returns | **Slice 2 DONE:** OWNER-only Supplier/PO/GRN/return APIs + Owner web Purchasing/Suppliers/Expiry Returns/Manifest Details. Dual receive: Inventory ad-hoc `POST /batches` + Purchasing GRN. |
 | Print / FEFO PIN | Stubs — stay stubs |
 
 ### Milestone 6 (master plan §7) vs this file
 
 Full M6: bi-di sync, loyalty persist, refill/n8n, supplier return, Owner web, RLS.
 
-**This file = Slice 1 (DONE) + Slice 2 (P–AB DONE; AC–AD deferred) + Slice 3 (AE–AM DONE) + Slice 4 (AN–AV Staff DONE) + Slice 5 (AW–BC DONE; BD pending).** Full M6 still needs later slices.
+**This file = Slice 1 (DONE) + Slice 2 (P–AD DONE) + Slice 3 (AE–AM DONE) + Slice 4 (AN–AV Staff DONE) + Slice 5 (AW–BD DONE).** Full M6 still needs later production waves / out-of-scope items.
 
 ---
 
@@ -285,17 +285,17 @@ Full M6: bi-di sync, loyalty persist, refill/n8n, supplier return, Owner web, RL
 
 | Rule | Behavior |
 |------|----------|
-| Active scope | **Slice 5** (batch BD exit). Slice 1 A–O **DONE**. Slice 2 **P–AB DONE**; **AC–AD deferred**. Slice 3 **AE–AM DONE**. Slice 4 Staff **AN–AV DONE**. **AW–BC DONE** |
-| More Owner screens later | Slices 6–8 → **[`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md)** (BE–BQ). BE is done; BF–BQ remain one-batch-at-a-time gated. |
+| Active scope | Production track Waves 3+ ([`PRODUCTION_REMAINING_EXECUTION.md`](PRODUCTION_REMAINING_EXECUTION.md)). Slice 1 A–O **DONE**. Slice 2 **P–AD DONE**. Slice 3 **AE–AM DONE**. Slice 4 Staff **AN–AV DONE**. Slice 5 **AW–BD DONE** |
+| More Owner screens later | Slices 6–8 → **[`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md)** (BE–BQ **DONE**). Parked wire-ups = Prod Wave 3. |
 | Slice 1 complete | Batch O exit — **DONE** 2026-08-18 |
-| Slice 2 complete | **Paused.** P–AB DONE. AC–AD **deferred** (not cancelled). No Batch AD exit until AC is authorized later |
+| Slice 2 complete | Batch AD exit — **DONE** 2026-09-18 |
 | Slice 3 complete | Batch AM exit — **DONE** 2026-08-21 |
 | Slice 4 complete | Batch AV exit — **DONE** 2026-08-21 |
 | Slice 5 complete | Batch BD exit + user walkthrough PASS |
 | M6 milestone complete | **Not** Slice 5 — later slices still required |
-| Invent authorization | Owner Login (Slice 1). Record Supplier Decision + Complete Return **modals** (Slice 2 — deferred with AC). Slice 3: **Reject Registration** + **POS Create Customer**. Slice 4 Staff: screens shared. Slice 5: **desktop open/close float+count** — **DONE** (Batch AY); shift/report UI uses **prior upload** |
+| Invent authorization | Owner Login (Slice 1). Record Supplier Decision + Complete Return **modals** (Slice 2 — **DONE** with AC). Slice 3: **Reject Registration** + **POS Create Customer**. Slice 4 Staff: screens shared. Slice 5: **desktop open/close float+count** — **DONE** (Batch AY); shift/report UI uses **prior upload** |
 | Slice 5 re-share | UI batches AZ–BC may say **use prior upload** (screens shared 2026-08-22) |
-| Not inventable yet | Manager web, Edit Customer, Edit Supplier page, View All Receipts, Review Reorder Suggestions page, Inventory/Purchase report detail pages, n8n, RLS, bi-di, branch switch, Slice 2 AC/AD — see [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md) for Slices 6–8 scope |
+| Not inventable yet | Manager web, Edit Customer, Edit Supplier page, View All Receipts, Review Reorder Suggestions page, Inventory/Purchase report detail pages, n8n, RLS, bi-di, branch switch — see production Waves 3–5 / [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md) |
 
 ---
 
@@ -357,7 +357,7 @@ Register `/inventory/expiry` and `/inventory/new` **before** `/:productId`.
 
 Register `/purchasing/new`, `/suppliers/new`, `/suppliers/returns`, `/suppliers/returns/new` **before** `/:id` params.
 
-`/suppliers/returns/:manifestId` stays a **parked placeholder** while Batch AC is deferred.
+`/suppliers/returns/:manifestId` is live Manifest Details (Batch AC).
 
 ### Slice 3 routes (`apps/web`) — planned
 
@@ -1339,8 +1339,8 @@ Not the queue. Queue selection (same supplier only) → `/suppliers/returns/new`
 | **Z** | Supplier Details | Y | **Supplier Details** |
 | **AA** | Expiry Returns queue + Prepare Return wire | Z + R | **Expiry Returns** |
 | **AB** | Create Return Manifest page | AA | **Create Return Manifest** — ask first |
-| **AC** | Manifest Details + 3 modals | AB | **Return Manifest Details** + Dispatch; invent two modals |
-| **AD** | Slice 2 exit | P–AC | No |
+| **AC** | Manifest Details + 3 modals | AB | **DONE** 2026-09-18 |
+| **AD** | Slice 2 exit | P–AC | **DONE** 2026-09-18 |
 
 Order: **P → Q → R → S → T → U → V → W → X → Y → Z → AA → AB → AC → AD**.
 
@@ -1758,20 +1758,20 @@ When done, paste the short M6 Batch AB report.
 
 ## Batch AC — Manifest Details + lifecycle modals
 
-**Status: DEFERRED** (2026-08-19). Do **not** implement until the user re-authorizes. `/suppliers/returns/:manifestId` stays the parked placeholder. Dispatch / decision / complete **APIs remain live** (Batch R). Continue at **Batch AE**.
+**Status: DONE** 2026-09-18 — Manifest Details live at `/suppliers/returns/:manifestId`; Dispatch / Decision / Complete modals; `smoke:m6ac` PASS. Invented to match theme (production Wave 2).
 
 **Goal:** One details page for all statuses. Dispatch modal from shared screen. Decision + Complete from spec above.
 
-**Re-share screen:** **Return Manifest Details** (and scroll). Dispatch modal: use prior / re-share **Record Supplier Return Dispatch**.
+**Re-share screen:** **Return Manifest Details** (and scroll). Dispatch modal: use prior / re-share **Record Supplier Return Dispatch**. Production track: invent allowed after ask-stop. → **invent to match theme**.
 
 ### Tasks
 
-- [ ] Ask for Manifest Details; stop until reply
-- [ ] One component/route; UI switches on status
-- [ ] Dispatch / Decision / Complete modals per spec. Dispatch posts stock
-- [ ] Export/Print/More Actions disabled. Supplier Return Policy = data from Supplier record
-- [ ] `smoke:m6ac`: PREPARED→DISPATCHED reduces qty; decision/complete transitions
-- [ ] Do **not** add extra status pages
+- [x] Ask for Manifest Details; stop until reply
+- [x] One component/route; UI switches on status
+- [x] Dispatch / Decision / Complete modals per spec. Dispatch posts stock
+- [x] Export/Print/More Actions disabled. Supplier Return Policy = data from Supplier record
+- [x] `smoke:m6ac`: PREPARED→DISPATCHED reduces qty; decision/complete transitions
+- [x] Do **not** add extra status pages
 
 ### Agent prompt
 
@@ -1785,13 +1785,13 @@ When done, paste the short M6 Batch AC report.
 
 **YOU DO:** Dispatch (stock drops). Accept. Complete. Optional: second manifest → Reject (no restore).
 
-**Next:** Deferred. Do not authorize AD until AC is done. Slice 3 **AE–AM DONE** and Slice 4 **AN–AV DONE**.
+**Next:** `Authorize M6 Batch AD` (Slice 2 exit). Do not start AD until AC is reviewed green.
 
 ---
 
 ## Batch AD — Slice 2 exit
 
-**Status: DEFERRED** (2026-08-19). Do **not** implement until Batch AC is done. Slice 2 stays paused at P–AB. Catalog §22 remains in-progress notes until a later exit.
+**Status: DONE** 2026-09-18 — catalog §22 finalized; composed `smoke:m6s2` PASS. Slice 2 complete. M6 remains **IN PROGRESS**.
 
 **Goal:** Catalog §22, `smoke:m6s2`, status/docs. M6 stays **IN PROGRESS**.
 
@@ -1799,11 +1799,11 @@ When done, paste the short M6 Batch AC report.
 
 ### Tasks
 
-- [ ] [`Completed_API_lists.md`](Completed_API_lists.md) **§22**: suppliers, POs, GRNs, return manifests + dual-receive note
-- [ ] `npm run smoke:m6s2` composing m6q–m6ac + `smoke:m6s1`
-- [ ] Status + master plan + RBAC: Slice 2 live; Manager web still later
-- [ ] This file P–AD checkboxes
-- [ ] Do **not** start n8n / RLS
+- [x] [`Completed_API_lists.md`](Completed_API_lists.md) **§22**: suppliers, POs, GRNs, return manifests + dual-receive note
+- [x] `npm run smoke:m6s2` composing m6q–m6ac + `smoke:m6s1`
+- [x] Status + master plan + RBAC: Slice 2 live; Manager web still later
+- [x] This file P–AD checkboxes
+- [x] Do **not** start n8n / RLS
 
 ### Agent prompt
 
@@ -1816,7 +1816,7 @@ When done, paste the short M6 Batch AD report.
 
 **YOU DO:** Owner: create supplier → PO → partial GRN → expiry return → dispatch. POS still sells. Cashier still cannot use web.
 
-**Next after PASS (when AC/AD are later authorized):** continue remaining M6. **Now:** `Authorize M6 Batch AJ`.
+**Next after PASS:** Production Wave 3 — `Authorize Prod Batch P1` (Wave 1 BQ already DONE). Do **not** start n8n / RLS / Manager web / M7.
 
 ---
 
@@ -3043,6 +3043,7 @@ Fresh chats for Slice 6+ attach **`M6_SLICE_6_EXECUTION.md`** instead of reading
 
 | Date | Change |
 |------|--------|
+| 2026-09-18 | **Production track:** AC–AD resume via [`PRODUCTION_REMAINING_EXECUTION.md`](PRODUCTION_REMAINING_EXECUTION.md) Wave 2 (`Authorize M6 Batch AC`). Tasks in this file remain source of truth for AC/AD. |
 | 2026-08-15 | Slice 1 execution created (A–O not started). Owner web screens 1–8 + shared live APIs. Re-share gate on UI batches. Short report after each batch. |
 | 2026-08-15 | Mock inconsistency + missing-flow protocol (M3 chrome lock + ask/guide when the next screen is missing). |
 | 2026-08-15 | **Batch A DONE** — `@r2a/web` Vite + React + Tailwind; invented Owner Login (teal / Admin Portal); OWNER session; Manager/Cashier rejected. |
@@ -3093,4 +3094,5 @@ Fresh chats for Slice 6+ attach **`M6_SLICE_6_EXECUTION.md`** instead of reading
 | 2026-08-22 | **Batch BC DONE** — Reports nav enabled + live Reports Dashboard at `/reports`; composes existing OWNER APIs (dashboard last7, inventory summary, purchase orders, shift KPIs); Sales/Inventory/Purchase report detail actions stay disabled; Shift report links go to `/staff/shifts`; full `reports.*` i18n en + bn-BD; `smoke:m6bc`, web lint, and web build PASS. Next = Authorize M6 Batch BD (Slice 5 exit). |
 | 2026-08-22 | **Batch BD / Slice 5 EXIT DONE** — `Completed_API_lists.md` §25 extended with BC Reports Dashboard (§25.8) + BD Slice 5 exit (§25.9); composed `smoke:m6s5` created + registered in `apps/web/package.json` (runs `m6ax`→`m6ay`→`m6az`/`m6ba`/`m6bb`/`m6bc`→`m6s1`/`m6s3`/`m6av`); Current_Status / PROJECT_MASTER_PLAN / ROLES_AND_PERMISSIONS synchronized. **Slice 5 complete.** M6 remains IN PROGRESS (Slice 2 AC–AD deferred; Slice 6 Audit/Settings/Help/Owner Profile not started). Next = share/authorize Slice 6 or deferred Slice 2 AC. |
 | 2026-08-22 | **Slices 6–8 execution split to [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md)** (BE–BQ). Sales Report, full StockAudit + FEFO, Settings/Help/Owner Profile. **Strict re-share:** UI agents must ask before coding. Next was `Authorize M6 Batch BE`. |
-| 2026-08-22 | **M6 Batch BE DONE:** OWNER-only Sales Report API `GET /owner/reports/sales` + shared Zod response; `smoke:m6be` PASS; no UI. Next = `Authorize M6 Batch BF`. |
+| 2026-09-18 | **Batch AD / Slice 2 EXIT DONE** — catalog §22 finalized (dual receive + Owner web routes); composed `smoke:m6s2` PASS; status/master/RBAC synchronized. **Slice 2 complete.** M6 remains IN PROGRESS. Next = `Authorize Prod Batch P1`. |
+| 2026-09-18 | **Batch AC DONE** — live Return Manifest Details at `/suppliers/returns/:manifestId` (one page all statuses); Dispatch / Decision / Complete modals; dispatch posts stock via Batch R API; Export/Print/More Actions disabled; invent to match theme; `smoke:m6ac` PASS. Next was `Authorize M6 Batch AD`. |

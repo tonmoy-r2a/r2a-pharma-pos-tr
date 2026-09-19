@@ -35,7 +35,8 @@ export type NavItem = {
   labelKey: MessageKey;
   icon: LucideIcon;
   live: boolean;
-  path?: OwnerPath;
+  /** Chrome path or deep link (e.g. /settings/account for footer Owner Profile). */
+  path?: OwnerPath | "/settings/account";
 };
 
 /** Live Owner routes. Unauthorized later items stay visible and disabled. */
@@ -107,7 +108,8 @@ export const PRIMARY_NAV: readonly NavItem[] = [
     id: "settings",
     labelKey: "nav.settings",
     icon: Settings,
-    live: false,
+    live: true,
+    path: "/settings",
   },
 ] as const;
 
@@ -116,12 +118,14 @@ export const FOOTER_NAV: readonly NavItem[] = [
     id: "help",
     labelKey: "nav.help",
     icon: CircleHelp,
-    live: false,
+    live: true,
+    path: "/help",
   },
   {
     id: "ownerProfile",
     labelKey: "nav.ownerProfile",
     icon: UserCircle,
-    live: false,
+    live: true,
+    path: "/settings/account",
   },
 ] as const;

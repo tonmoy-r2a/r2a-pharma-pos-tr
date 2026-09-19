@@ -1,14 +1,13 @@
 /**
- * Local completed-sale log for Transactions List (M3 Batch AJ).
+ * Local completed-sale log for Transactions List (M3 Batch AJ + Prod P13).
  *
  * Choice: webview `localStorage` (same family as pharmacyHeader / forceOffline).
  * Key: pharmasync.transactionLog.<tenantId>.<storeId|none>
  *
- * Why local: there is no cloud `GET /sales` list endpoint yet.
- * TODO(cloud): when a tenant-scoped sales list API exists, prefer online fetch
- * and keep this log as offline / recent-cache fallback (ask before inventing routes).
+ * Prod P13: online list prefers cloud `GET /sales` (see `cloudSales.ts`);
+ * this store remains offline source + local-only rows until ingest flush.
  *
- * Cap: newest 100 entries (list + detail/reprint invent).
+ * Cap: newest 100 entries (list + detail/reprint).
  */
 
 import type { CartLine } from "@/features/pos/cartTypes";

@@ -5,3 +5,4 @@ export { AddProductPage } from "./AddProductPage";
 export { ReceiveStockPage } from "./ReceiveStockPage";
 export { EditProductPage } from "./EditProductPage";
 export { BatchManagementPage } from "./BatchManagementPage";
+export { CatalogImportPage } from "./CatalogImportPage";

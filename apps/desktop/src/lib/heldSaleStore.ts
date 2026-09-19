@@ -1,19 +1,15 @@
 /**
- * Local held / parked sales (M3 Batch AM).
+ * Local held / parked sales (M3 Batch AM + Prod P12 cloud).
  *
- * Soft hold only: snapshots cart lines + customer + loyalty for this terminal.
+ * Soft hold only: snapshots cart lines + customer + loyalty.
  * Does NOT reserve stock. Resume re-validates qty/expiry (`heldSaleRecheck`).
- * Hold F6 + Held list UI: Batch AN (`HeldSalesPanel`).
- * FEFO override metadata travels on each `CartLine.fefoOverride` (no separate field).
  *
- * Choice: webview `localStorage` (same family as shift / transactionLog).
- * Key: pharmasync.heldSales.<tenantId>.<storeId|none>
- * Cap: 3 held snapshots. A 4th add is refused (no overwrite).
+ * Offline: webview `localStorage` keyed `pharmasync.heldSales.<tenantId>.<storeId|none>`.
+ * Online (Prod P12): cloud `/api/v1/held-sales` is canonical for the store;
+ * this store is a local cache + offline fallback. Cap remains 3 (store-scoped online).
  *
- * Machine-local only — not shared across terminals.
  * Snapshot does not include cash-received / card / MFS tender drafts.
- * TODO(cloud): no cloud hold / multi-terminal shared holds until authorized.
- * Do not invent a hold API in this slice.
+ * TODO(cloud): hard stock reservation on holds remains out of scope.
  */
 
 import type { CartLine, CartLineFefoOverride } from "@/features/pos/cartTypes";
@@ -326,15 +322,41 @@ export const heldSaleStore = {
     if (!tenantId) return { ok: false, reason: "empty_tenant" };
     const snapshot = buildHeldSaleSnapshot(input);
     if (!snapshot) return { ok: false, reason: "empty_lines" };
+    return this.put(tenantId, storeId, snapshot);
+  },
+
+  /**
+   * Insert / upsert an existing snapshot (cloud id preserved). Newest first.
+   * Refuses a 4th distinct hold (no overwrite of other ids).
+   */
+  put(
+    tenantId: string,
+    storeId: string | null,
+    snapshot: HeldSaleSnapshot,
+  ): HeldSaleAddResult {
+    if (!tenantId) return { ok: false, reason: "empty_tenant" };
+    if (!snapshot.lines.length) return { ok: false, reason: "empty_lines" };
     const existing = readList(tenantId, storeId);
-    if (!canAddHeldSale(existing.length)) {
+    const without = existing.filter((e) => e.id !== snapshot.id);
+    const isNew = without.length === existing.length;
+    if (isNew && !canAddHeldSale(existing.length)) {
       return { ok: false, reason: "at_capacity" };
     }
-    const next = [snapshot, ...existing.filter((e) => e.id !== snapshot.id)];
+    const next = [snapshot, ...without];
     if (!writeList(tenantId, storeId, next)) {
       return { ok: false, reason: "storage" };
     }
     return { ok: true, snapshot };
+  },
+
+  /** Replace local cache with cloud canonical list (Prod P12 reconcile). */
+  replaceAll(
+    tenantId: string,
+    storeId: string | null,
+    list: HeldSaleSnapshot[],
+  ): boolean {
+    if (!tenantId) return false;
+    return writeList(tenantId, storeId, list.slice(0, MAX_HELD_SALES));
   },
 
   remove(tenantId: string, storeId: string | null, id: string): boolean {

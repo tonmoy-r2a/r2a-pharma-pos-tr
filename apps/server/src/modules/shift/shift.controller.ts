@@ -3,6 +3,7 @@ import type {
   ShiftOpenInput,
   ShiftCloseInput,
   ShiftResolveInput,
+  ShiftCashCountRequestInput,
   OwnerShiftListQuery,
 } from "@r2a/shared-types";
 import { catchAsync, sendResponse } from "../../utils";
@@ -71,4 +72,31 @@ export const resolve = catchAsync(async (req: Request, res: Response) => {
     req.body as ShiftResolveInput,
   );
   sendResponse(res, { statusCode: 200, message: "Variance resolved", data });
+});
+
+export const requestCashCount = catchAsync(async (req: Request, res: Response) => {
+  const ctx = requireTenantContext(req);
+  const data = await shiftService.requestCashCount(
+    ctx,
+    req.params.shiftId!,
+    req.body as ShiftCashCountRequestInput,
+  );
+  sendResponse(res, {
+    statusCode: 200,
+    message: "Cash count requested",
+    data,
+  });
+});
+
+export const cancelCashCount = catchAsync(async (req: Request, res: Response) => {
+  const ctx = requireTenantContext(req);
+  const data = await shiftService.cancelCashCountRequest(
+    ctx,
+    req.params.shiftId!,
+  );
+  sendResponse(res, {
+    statusCode: 200,
+    message: "Cash count request cancelled",
+    data,
+  });
 });

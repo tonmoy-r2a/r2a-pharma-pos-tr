@@ -74,6 +74,10 @@ function checkShiftStoreCloudApi(): void {
     storeSrc.includes("async fetchAndCache("),
     "shiftStore must have async fetchAndCache method",
   );
+  assert(
+    storeSrc.includes("statusCode === 409"),
+    "shiftStore.open must adopt existing cloud shift on 409",
+  );
 
   // Helpers still present
   const iso = "2026-08-22T08:42:00.000Z";
@@ -126,6 +130,10 @@ function checkShiftPanelCloudIntegration(): void {
   assert(
     panel.includes("confirmOpen") || panel.includes("confirmClose"),
     "ShiftPanel must have confirm dialogs",
+  );
+  assert(
+    panel.includes("fetchAndCache"),
+    "ShiftPanel must rehydrate active shift from cloud",
   );
 
   // No Tab, arrow key navigation
@@ -182,6 +190,10 @@ function checkAppShiftIdPassing(): void {
     app.includes("shiftStore.get") && app.includes("?.shiftId"),
     "App must pass shiftId from cached shift to sale ingest",
   );
+  assert(
+    app.includes("fetchAndCache"),
+    "App must rehydrate active shift on login/reconnect",
+  );
 
   console.log("  ✓ App shiftId passing");
 }
@@ -219,6 +231,7 @@ function checkI18nKeys(): void {
     "shift.openFailed",
     "shift.closeFailed",
     "shift.fetchFailed",
+    "shift.alreadyOpen",
     "shift.closeShiftBalanced",
     "shift.closeShiftFlagged",
   ];

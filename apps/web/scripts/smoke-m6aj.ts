@@ -7,8 +7,9 @@
  * customer information, registration information, purchase history,
  * loyalty activity and a known-facts timeline from live data. Purchase rows
  * navigate to /sales/:id. A PENDING_APPROVAL id redirects to the Review page
- * (live in Batch AK). Edit Customer + More Actions are disabled. No hard-coded
- * sample data (no Sadia Akter / ৳2,417 / mock totals).
+ * (live in Batch AK). Edit Customer navigates to `/customers/:id/edit` (Prod P1);
+ * More Actions stays disabled. No hard-coded sample data (no Sadia Akter /
+ * ৳2,417 / mock totals).
  */
 
 import { readFileSync, readdirSync } from "node:fs";
@@ -193,10 +194,14 @@ function checkPage(): void {
   );
   assert(
     page.includes('t("customers.detail.editCustomer")') &&
-      page.includes('t("customers.detail.moreActions")') &&
-      page.includes('disabled') &&
+      page.includes("/customers/${encodeURIComponent(profile.id)}/edit"),
+    "Edit Customer must navigate to /customers/:id/edit",
+  );
+  assert(
+    page.includes('t("customers.detail.moreActions")') &&
+      page.includes('title={t("customers.detail.moreSoon")}') &&
       page.includes('aria-disabled="true"'),
-    "Edit Customer + More Actions must be disabled",
+    "More Actions must remain disabled",
   );
   assert(
     page.includes('status === "PENDING_APPROVAL"') &&

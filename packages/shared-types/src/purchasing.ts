@@ -234,3 +234,41 @@ export const returnManifestCompleteSchema = z
 export type ReturnManifestCompleteInput = z.infer<
   typeof returnManifestCompleteSchema
 >;
+
+/** Prod P15 — incomplete GRN form lot (strings match Owner receive UI). */
+export const goodsReceiptDraftLotSchema = z.object({
+  key: z.string().trim().min(1).max(128),
+  batchNumber: z.string().max(120),
+  expiryDate: z.string().max(32),
+  qty: z.string().max(32),
+  costPerBase: z.string().max(32),
+  sellPerBase: z.string().max(32),
+});
+export type GoodsReceiptDraftLot = z.infer<typeof goodsReceiptDraftLotSchema>;
+
+export const goodsReceiptDraftLineSchema = z.object({
+  lineId: idSchema,
+  lots: z.array(goodsReceiptDraftLotSchema).max(50),
+});
+export type GoodsReceiptDraftLine = z.infer<typeof goodsReceiptDraftLineSchema>;
+
+export const goodsReceiptDraftPayloadSchema = z
+  .object({
+    supplierInvoiceRef: z.string().max(160).optional().default(""),
+    deliveryNote: z.string().max(500).optional().default(""),
+    receivedDate: z.string().max(32).optional().default(""),
+    lines: z.array(goodsReceiptDraftLineSchema).max(500),
+  })
+  .strict();
+export type GoodsReceiptDraftPayload = z.infer<
+  typeof goodsReceiptDraftPayloadSchema
+>;
+
+export const goodsReceiptDraftUpsertSchema = z
+  .object({
+    payload: goodsReceiptDraftPayloadSchema,
+  })
+  .strict();
+export type GoodsReceiptDraftUpsertInput = z.infer<
+  typeof goodsReceiptDraftUpsertSchema
+>;

@@ -5,8 +5,8 @@
  * Source guards only (no live API). The page is live on GET /owner/suppliers/:id
  * (OWNER only) and renders KPIs, info, performance, the purchase-order table and
  * the products-supplied table from computed values — never invented numbers.
- * View All POs / View All Products stay disabled (Purchasing/Inventory cannot
- * filter by supplier yet). No Edit Supplier.
+ * Edit Supplier is live (Prod P2). View All POs (Prod P3) and View All Products
+ * (Prod P4) deep-link to Purchasing / Inventory with supplierId.
  */
 
 import { readFileSync, readdirSync } from "node:fs";
@@ -84,7 +84,6 @@ const DETAIL_I18N_KEYS = [
   "suppliers.detail.po.col.status",
   "suppliers.detail.po.empty",
   "suppliers.detail.po.viewAll",
-  "suppliers.detail.po.viewAllSoon",
   "suppliers.detail.products.title",
   "suppliers.detail.products.col.medicine",
   "suppliers.detail.products.col.stock",
@@ -92,7 +91,6 @@ const DETAIL_I18N_KEYS = [
   "suppliers.detail.products.col.status",
   "suppliers.detail.products.empty",
   "suppliers.detail.products.viewAll",
-  "suppliers.detail.products.viewAllSoon",
   "suppliers.detail.products.status.inStock",
   "suppliers.detail.products.status.lowStock",
   "suppliers.detail.products.status.outOfStock",
@@ -207,10 +205,16 @@ function checkSupplierDetailsPage(): void {
     "Products Supplied table must list medicine, stock, cost and status",
   );
   assert(
-    page.includes("suppliers.detail.po.viewAllSoon") &&
-      page.includes("suppliers.detail.products.viewAllSoon") &&
-      page.includes("disabled"),
-    "View All POs and View All Products must stay disabled",
+    page.includes("`/purchasing?supplierId=${encodeURIComponent(supplierId)}`") &&
+      page.includes('t("suppliers.detail.po.viewAll")') &&
+      !page.includes("suppliers.detail.po.viewAllSoon"),
+    "View All POs must deep-link to /purchasing?supplierId=… (Prod P3)",
+  );
+  assert(
+    page.includes("/inventory?supplierId=") &&
+      page.includes('t("suppliers.detail.products.viewAll")') &&
+      !page.includes("suppliers.detail.products.viewAllSoon"),
+    "View All Products must deep-link to /inventory?supplierId=… (Prod P4)",
   );
   assert(
     page.includes("suppliers.detail.po.empty") &&
@@ -231,8 +235,9 @@ function checkSupplierDetailsPage(): void {
     "AppShell must render SupplierDetailsPage for /suppliers/:id via suppliersSubpath",
   );
   assert(
-    !/EditSupplierPage/.test(all) && !page.includes("suppliers.edit"),
-    "No Edit Supplier route may exist",
+    page.includes('t("suppliers.detail.editSupplier")') &&
+      page.includes("/suppliers/${encodeURIComponent(supplier.id)}/edit"),
+    "Supplier Details must wire Edit Supplier to /suppliers/:id/edit (Prod P2)",
   );
   assert(
     !/₂|₺/.test(all) &&
@@ -244,7 +249,7 @@ function checkSupplierDetailsPage(): void {
       !/2\.4 days/.test(all),
     "Must not hard-code ₺, mock dollar totals, or the decorative sample KPIs (৳2,480,000 / 94% / 1.8% / 2.4 days)",
   );
-  console.log("  ✓ SupplierDetailsPage renders honest computed KPIs, tables + disabled View All");
+  console.log("  ✓ SupplierDetailsPage renders honest computed KPIs, tables + Edit CTA");
 }
 
 function checkServer(): void {

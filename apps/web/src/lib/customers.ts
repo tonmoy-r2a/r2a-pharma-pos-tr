@@ -213,6 +213,40 @@ export async function fetchCustomerDetail(
   );
 }
 
+/** Partial profile update — Prod P1. PATCH /api/v1/customers/:id (OWNER/MANAGER). */
+export type CustomerUpdatePayload = {
+  name?: string;
+  phone?: string;
+  email?: string | null;
+  dateOfBirth?: Date | null;
+  gender?: CustomerGender | null;
+  address?: string | null;
+  status?: "ACTIVE" | "INACTIVE";
+};
+
+export type UpdatedCustomer = {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  dateOfBirth: string | null;
+  gender: CustomerGender | null;
+  address: string | null;
+  status: CustomerStatus;
+  source: CustomerSource;
+};
+
+/** Live PATCH — Prod Batch P1 Edit Customer. */
+export async function updateCustomer(
+  customerId: string,
+  input: CustomerUpdatePayload,
+): Promise<UpdatedCustomer> {
+  return apiRequest<UpdatedCustomer>(
+    `/api/v1/customers/${encodeURIComponent(customerId)}`,
+    { method: "PATCH", body: input },
+  );
+}
+
 /** Corrections the Owner may send when approving a POS registration (Batch AK). */
 export type CustomerApprovePayload = {
   name: string;

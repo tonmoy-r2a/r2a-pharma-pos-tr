@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import type {
   GoodsReceiptCreateInput,
+  GoodsReceiptDraftUpsertInput,
   PurchaseOrderCreateInput,
   PurchaseOrderDraftUpdateInput,
   PurchaseOrderListQuery,
@@ -147,6 +148,45 @@ export const createGoodsReceipt = catchAsync(
       statusCode: 201,
       message: "Goods receipt confirmed",
       data: result,
+    });
+  },
+);
+
+export const getGoodsReceiptDraft = catchAsync(
+  async (req: Request, res: Response) => {
+    const data = await purchasingService.getGoodsReceiptDraft(
+      requireTenantContext(req),
+      req.params.poId!,
+    );
+    sendResponse(res, { statusCode: 200, message: "OK", data });
+  },
+);
+
+export const upsertGoodsReceiptDraft = catchAsync(
+  async (req: Request, res: Response) => {
+    const data = await purchasingService.upsertGoodsReceiptDraft(
+      requireTenantContext(req),
+      req.params.poId!,
+      req.body as GoodsReceiptDraftUpsertInput,
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      message: "Receipt draft saved",
+      data,
+    });
+  },
+);
+
+export const deleteGoodsReceiptDraft = catchAsync(
+  async (req: Request, res: Response) => {
+    const data = await purchasingService.deleteGoodsReceiptDraft(
+      requireTenantContext(req),
+      req.params.poId!,
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      message: "Receipt draft discarded",
+      data,
     });
   },
 );

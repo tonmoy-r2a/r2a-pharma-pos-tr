@@ -4,8 +4,8 @@
 **Package:** `@r2a/server` (`apps/server`)  
 **Base URL (dev):** `http://localhost:8787` (override with `PORT` / `BASE_URL`)  
 **API prefix:** `/api/v1`  
-**Last updated:** 2026-08-22
-**Milestone coverage:** **M2 — Cloud API core** (Batches A–H) + **M3 desktop POS shell DONE** (§14–§18 / Slices 2–6) + **M4 one-way sync DONE** (**§19**) + **M5 MVP hardening DONE** (**§20**) + **M6 Owner Web Slice 1 A–O DONE** (**§21**) + Owner Web Missing Features **W1–W6 DONE** + **M6 Slice 2 P–AB** (**§22; T–AB web UI live; AC–AD deferred**) + **M6 Slice 3 AE–AM DONE** (**§23**) + **M6 Slice 4 Staff AN–AV DONE** (**§24**) + **M6 Slice 5 AW–BC DONE, BD Slice 5 exit DONE** (**§25; shift APIs + ingest shiftId + dashboard KPIs + desktop cloud shift + owner Shift Management/Details/Review Variance + Reports Dashboard + composed smoke:m6s5**) + **M6 Slice 6 BE–BG DONE** (**§26; Sales Report API + UI + composed smoke:m6s6**) + **M6 Slice 7 BH–BJ DONE** (**schema/Zod/seed + audit/FEFO APIs + ingest hook + Audit & FEFO dashboard UI; Audit Detail still gated for BK**)
+**Last updated:** 2026-09-18
+**Milestone coverage:** **M2 — Cloud API core** (Batches A–H) + **M3 desktop POS shell DONE** (§14–§18 / Slices 2–6) + **M4 one-way sync DONE** (**§19**) + **M5 MVP hardening DONE** (**§20**) + **M6 Owner Web Slice 1 A–O DONE** (**§21**) + Owner Web Missing Features **W1–W6 DONE** + **M6 Slice 2 P–AD DONE** (**§22; suppliers/PO/GRN/returns + dual receive; composed smoke:m6s2**) + **M6 Slice 3 AE–AM DONE** (**§23**) + **M6 Slice 4 Staff AN–AV DONE** (**§24**) + **M6 Slice 5 AW–BC DONE, BD Slice 5 exit DONE** (**§25**) + **M6 Slice 6 BE–BG DONE** (**§26**) + **M6 Slice 7 BH–BL DONE** (**§27**) + **M6 Slice 8 BM–BQ DONE** (**§28; Settings hub + Business/Account Profile + Help; composed smoke:m6s8**)
 
 > **Source of truth for contracts:** Zod schemas in `@r2a/shared-types`.  
 > **Live status:** [`Current_Status.md`](Current_Status.md).  
@@ -15,7 +15,7 @@
 > **Desktop note (Slice 3 V–Y):** Still **no new cloud endpoints**. Payment Select Method + Cash tender → `POST /sales/ingest` with `CASH` amount = due; shared Sale Completed + print **stub**. Card/MFS were gated in Slice 3 — **ungated in Slice 4** (§16).  
 > **Desktop note (Slice 4 AA–AD):** Still **no new cloud endpoints**. Receipt Preview (dynamic lines); Card stub terminal → `CARD` ingest; MFS bKash/Nagad/Rocket + **invented** confirm/result → `MFS` ingest (+ provider meta in `notes`). See **§16**.  
 > **Desktop note (Slice 5 AF–AL):** Still **no new cloud endpoints**. F4 substitutes (`GET /products/:id/substitutes`); Settings pharmacy header → Receipt Preview; Force Offline; Transactions list/detail/reprint from local log; Shift open/close local; Create Customer removed from POS; `POST /customers` **OWNER-only**. See **§17**.  
-> **Desktop note (Slice 6 AM–AP):** Still **no new cloud endpoints**. Hold / Park Sale is **local** (`heldSaleStore`, max 3 soft holds); **F6** Hold + **F7** Held list (toggle); resume rechecks live stock/expiry (strip/clamp); mid-payment Hold aborts card/MFS stubs and does **not** ingest. **No** hard reservation / cloud hold / multi-terminal shared holds. See **§18**.  
+> **Desktop note (Slice 6 AM–AP + Prod P12):** Hold / Park Sale is soft (no stock reservation). **F6** Hold + **F7** Held list (toggle); resume rechecks live stock/expiry (strip/clamp); mid-payment Hold aborts card/MFS stubs and does **not** ingest. **Prod P12:** online store-scoped cloud holds via `/api/v1/held-sales` (max 3); offline local `heldSaleStore`; reconnect cloud-canonical + push local-only. Hard inventory lock on holds still out of scope. See **§18**.
 > **M3 closed (2026-08-13):** Desktop POS shell complete. Later screens → Slice 7+. No new cloud routes in M3.  
 > **M4 closed (2026-08-14):** One-way offline→cloud sync. New cloud route `POST /api/v1/sync/ingest` (reuses `ingestSale`). Desktop 15s worker + Sync Queue panel. See **§19**.  
 > **M5 closed (2026-08-14):** **§20 — M5** — PATCH RBAC, desktop Receive stock (no new routes), Sync Queue 409 copy, paged catalog pull. Print / FEFO PIN stay stubs. See **§20**.  
@@ -36,8 +36,20 @@
 > **M6 Batch V (2026-08-19):** Owner web Purchase Order Details live on `GET /owner/purchase-orders/:poId` — header + status badge, KPI cards, receiving progress bar, line received/remaining, and GRN history for **this** PO. Export / Print / More Actions disabled. Receive Stock (enabled while remaining qty > 0 on a SENT / PARTIALLY_RECEIVED order) navigates to `/purchasing/:poId/receive`; the GRN form itself is Batch W. `smoke:m6v` PASS.
 > **M6 Batch W (2026-08-19):** Owner web Receive Stock against PO live at `/purchasing/:poId/receive` — Receipt Details, Received Items table (`+ Add Batch` / `Lot #N` rows with Valid / Incomplete / Exceeds status), Receipt Summary, and Inventory Impact projection. Submits to the Batch R route `POST /owner/purchase-orders/:poId/receipts` (**no new cloud route**) and returns to PO Details. Inventory ad-hoc `POST /batches` Receive Stock untouched. `smoke:m6w` PASS.
 > **M6 Batch X (2026-08-19):** Owner web Suppliers directory live at `/suppliers` — 4 KPI cards, Supplier Directory card (search, status filter, table, pagination), and a Supplier Attention rail. `GET /owner/suppliers` now additively returns `meta.kpis`, `meta.attention`, and per-item `stats` (response shape otherwise unchanged). No new cloud routes. `smoke:m6x` PASS.
-> **M6 Batch AB (2026-08-19):** Owner web Create Return Manifest live at `/suppliers/returns/new` — reviews the Expiry Returns session draft, supplier policy, editable return qty; posts existing `POST /owner/return-manifests` (optional `supplierReference`); Save as Draft disabled; no stock movement; Manifest Details still Batch AC (**deferred**). `smoke:m6ab` PASS.
+> **M6 Batch AB (2026-08-19):** Owner web Create Return Manifest live at `/suppliers/returns/new` — reviews the Expiry Returns session draft, supplier policy, editable return qty; posts existing `POST /owner/return-manifests` (optional `supplierReference`); Save as Draft disabled; no stock movement; Manifest Details was Batch AC. `smoke:m6ab` PASS.
+> **M6 Batch AC (2026-09-18):** Owner web Return Manifest Details live at `/suppliers/returns/:manifestId` — one page for Prepared/Dispatched/Accepted/Rejected/Completed; Record Dispatch / Supplier Decision / Complete Return modals; Dispatch posts existing `POST /owner/return-manifests/:id/dispatch` (stock leaves); Decision/Complete use existing Batch R routes (**no new cloud routes**). Export / Print / More Actions disabled. `smoke:m6ac` PASS.
 > **M6 Slice 3 AE–AG (2026-08-20):** Customer Prisma + Zod landed (AE). Customer APIs are live (AF): role-aware `POST /customers` (Owner Active; Cashier/Manager Pending + extras stripped), Active-only `GET /customers`, `GET /customers/phone-check`, Owner `GET /owner/customers` + `/:id` + approve/reject, `GET /sales?customerId=`, ingest Active-only guard, 403 on `/owner/customers*` for non-owners. Batch AG enables the Owner web Customers nav as a live chrome route with placeholder shells (`/customers`, `/customers/new`, `/customers/:id`, `/customers/:id/review`); Staff/Help/Owner Profile remain disabled. Catalog **§23** at Batch AM.
+> **Prod Batch P1 (2026-09-18):** Owner web Edit Customer live at `/customers/:id/edit`. Details Edit CTA enabled; More Actions still disabled. `PATCH /customers/:id` additively accepts `dateOfBirth` / `gender` / `address` / `status` (`ACTIVE`↔`INACTIVE` only; pending/rejected blocked). Phone-check ignores the same customer. `smoke:prod-p1` PASS.
+> **Prod Batch P2 (2026-09-18):** Owner web Edit Supplier live at `/suppliers/:id/edit`. PATCH ACTIVE↔HOLD (+ DRAFT if already). `smoke:prod-p2` PASS.
+> **Prod Batch P3 (2026-09-18):** Supplier Details **View All POs** deep-links to `/purchasing?supplierId=…`. Owner web PO list client sends `supplierId` to existing `GET /owner/purchase-orders` (already supported). Filter chip + clear. No new cloud route. `smoke:prod-p3` PASS.
+> **Prod Batch P4 (2026-09-18):** Supplier Details **View All Products** deep-links to `/inventory?supplierId=…`. Additive optional `supplierId` on `GET /owner/inventory` — products linked via ACTIVE batches with that supplier and/or PO lines for that supplier (same rule as Supplier Details). Filter chip + clear + honest empty. `smoke:prod-p4` PASS.
+> **Prod Batch P5 (2026-09-18):** Owner web Inventory Report live at `/reports/inventory`. Composes existing `GET /owner/inventory-summary`, `GET /owner/inventory` (low/out tabs), and `GET /owner/expiry` — **no new aggregate route**. Reports dashboard Inventory View Report + Status CTA enabled. Export disabled until P7. `smoke:prod-p5` PASS.
+> **Prod Batch P6 (2026-09-18):** Owner web Purchase Report live at `/reports/purchasing` (route lock). Composes existing `GET /owner/purchase-orders` — **no new aggregate route**. Reports dashboard Purchase View Report + Purchasing Status CTA enabled. Export disabled until P7. `smoke:prod-p6` PASS.
+> **Prod Batch P7 (2026-09-18):** Client-side CSV export live on Sales Report, Inventory Report, Purchase Report, Audit dashboard list, Audit detail lines, Shift detail summary, and Expiry Returns queue (`apps/web/src/lib/csvExport.ts`). No new cloud route / no server PDF / no thermal print IPC. Print buttons stay disabled with S2 hint. `smoke:prod-p7` PASS.
+> **Prod Batch P8 (2026-09-18):** Desktop Settings → **Stock Audit** (OWNER/MANAGER only). Online `POST /audits/start` → `POST /audits/:id/lines` → `POST /audits/:id/submit`. No offline audit queue. Owner web `/audit` remains review surface. **No new cloud routes.** `smoke:prod-p8` PASS.
+> **Prod Batch P15 (2026-09-18):** GRN Save as Draft — `GoodsReceiptDraft` + OWNER `GET/PUT/DELETE .../receipt-draft`; receive UI resume; Confirm clears draft. Supplier/Manifest drafts stay disabled with hints. See **§25.15**. `smoke:prod-p15` PASS. Wave 4 complete.
+> **Prod Batch P14 (2026-09-18):** Owner Catalog Import live at `/inventory/import`. OWNER `POST /owner/catalog/import/dry-run` + `/commit` — CSV/XLSX parse, sku upsert + units; max 2 MiB / 2000 rows. No cost columns / no desktop Excel / no bi-di. See **§25.14**. `smoke:prod-p14` PASS.
+> **Prod Batch P13 (2026-09-18):** Desktop Transactions → cloud uses existing `GET /sales` + `GET /sales/:id`. See **§25.13**.
 > **M6 Batch AJ (2026-08-20):** Owner web Customer Details live at `/customers/:customerId`. `GET /owner/customers/:id` **additively** returns `profile.storeName`, `purchaseHistory.lastPurchaseAt`, `purchaseHistory.rows` (id/receiptNo/soldAt/total/storeName), and `loyaltyActivity.rows` (id/soldAt/loyaltyPrevious/loyaltyUsed/loyaltyEarned) — prior shape preserved (`smoke:m6af` valid). No new cloud routes; `/customers/:id/review` stays a placeholder until Batch AK. `smoke:m6aj` PASS.
 > **M6 Batch AK (2026-08-20):** Owner web Customer Registration Review live at `/customers/:customerId/review` — reads live `GET /owner/customers/:id`; Approve posts existing `POST /owner/customers/:id/approve` (OWNER only, pending only; editable name/phone/email/DOB/gender/address corrections; phone duplicate check via existing `GET /customers/phone-check` ignoring the same customer), Reject posts existing `POST /owner/customers/:id/reject` (optional `rejectionNote` ≤1000). **No new cloud routes** — the live pending→approve→POS Active-search flow is covered by `smoke:m6af` (approve → ACTIVE, POS `GET /customers` Active-only, reject → REJECTED + hidden). `smoke:m6ak` PASS.
 > **M6 Batch AZ (2026-08-22):** Owner web Staff page now has **Shift Management** → `/staff/shifts`, consuming existing `GET /api/v1/owner/shifts` from Batch AX. Live list includes KPI totals from shift-list meta, All/Open/Closed/Flagged tabs, search, cashier filter, pagination, and detail navigation. **No new cloud routes.** `smoke:m6az` PASS.
@@ -217,8 +229,14 @@ Owners / managers see `costPerBase` on batch payloads.
 | GET | `/api/v1/owner/shifts` | Bearer | **`OWNER` only** — list shifts with filters |
 | GET | `/api/v1/owner/shifts/:shiftId` | Bearer | **`OWNER` only** — shift detail + breakdown |
 | POST | `/api/v1/owner/shifts/:shiftId/resolve` | Bearer | **`OWNER` only** — resolve flagged variance |
+| POST | `/api/v1/owner/shifts/:shiftId/cash-count-request` | Bearer | **`OWNER` only** — Prod P10 request cash count |
+| POST | `/api/v1/owner/shifts/:shiftId/cash-count-request/cancel` | Bearer | **`OWNER` only** — Prod P10 cancel cash-count request |
+| POST | `/api/v1/terminals/heartbeat` | Bearer | `CASHIER`, `MANAGER`, `OWNER` — Prod P11 desktop presence |
+| GET | `/api/v1/owner/terminals/presence` | Bearer | **`OWNER` only** — Prod P11 terminal presence list |
 | GET | `/api/v1/owner/dashboard` | Bearer | **`OWNER` only** |
 | GET | `/api/v1/owner/reports/sales` | Bearer | **`OWNER` only** — Sales Report aggregate API |
+| GET | `/api/v1/owner/reports/product-movement` | Bearer | **`OWNER` only** — Product movement (demand bands; Enhance D2) |
+| GET | `/api/v1/owner/reports/stock-priority` | Bearer | **`OWNER` only** — Sale-priority stock alarms P1–P4 (Enhance D3) |
 | GET | `/api/v1/owner/audit/dashboard` | Bearer | **`OWNER` only** — Audit + FEFO dashboard data |
 | GET | `/api/v1/owner/audits` | Bearer | **`OWNER` only** — Stock audit list |
 | GET | `/api/v1/owner/audits/:auditId` | Bearer | **`OWNER` only** — Stock audit detail |
@@ -230,6 +248,8 @@ Owners / managers see `costPerBase` on batch payloads.
 | GET | `/api/v1/owner/inventory-summary` | Bearer | **`OWNER` only** |
 | GET | `/api/v1/owner/expiry` | Bearer | **`OWNER` only** |
 | GET | `/api/v1/owner/inventory` | Bearer | **`OWNER` only** |
+| POST | `/api/v1/owner/catalog/import/dry-run` | Bearer | **`OWNER` only** — Prod P14 CSV/XLSX dry-run |
+| POST | `/api/v1/owner/catalog/import/commit` | Bearer | **`OWNER` only** — Prod P14 commit sku upserts |
 | GET | `/api/v1/owner/products/:id` | Bearer | **`OWNER` only** |
 | GET | `/api/v1/owner/batches/:id` | Bearer | **`OWNER` only** |
 | GET, POST | `/api/v1/owner/suppliers` | Bearer | **`OWNER` only** |
@@ -237,6 +257,9 @@ Owners / managers see `costPerBase` on batch payloads.
 | GET, POST | `/api/v1/owner/purchase-orders` | Bearer | **`OWNER` only** |
 | GET, PATCH | `/api/v1/owner/purchase-orders/:poId` | Bearer | **`OWNER` only**; PATCH only while `DRAFT` |
 | POST | `/api/v1/owner/purchase-orders/:poId/receipts` | Bearer | **`OWNER` only**; confirmed GRN |
+| GET | `/api/v1/owner/purchase-orders/:poId/receipt-draft` | Bearer | **`OWNER` only** — Prod P15 GRN draft |
+| PUT | `/api/v1/owner/purchase-orders/:poId/receipt-draft` | Bearer | **`OWNER` only** — Prod P15 save GRN draft |
+| DELETE | `/api/v1/owner/purchase-orders/:poId/receipt-draft` | Bearer | **`OWNER` only** — Prod P15 discard GRN draft |
 | GET | `/api/v1/owner/returns/queue` | Bearer | **`OWNER` only** |
 | POST | `/api/v1/owner/return-manifests` | Bearer | **`OWNER` only** |
 | GET | `/api/v1/owner/return-manifests/:manifestId` | Bearer | **`OWNER` only** |
@@ -620,13 +643,17 @@ Reason codes: `COUNT_CORRECTION`, `DAMAGE`, `BREAKAGE`, `RETURN`, `RECEIVE_CORRE
 
 ### 10.4 `PATCH /api/v1/customers/:id`
 
-**Auth:** Bearer · **`restrictTo("OWNER", "MANAGER")`** (M5 Batch A). Cashiers receive **`403`** (search-only at POS). Owner web edit UI is **M6**.
+**Auth:** Bearer · **`restrictTo("OWNER", "MANAGER")`** (M5 Batch A). Cashiers receive **`403`** (search-only at POS). Owner web Edit Customer UI is **live** (Prod Batch P1) at `/customers/:id/edit`.
 
-Partial: `name?`, `phone?` (nullable), `email?` (nullable).
+Partial: `name?`, `phone?`, `email?` (nullable), `dateOfBirth?` (nullable), `gender?` (nullable), `address?` (nullable), `status?` (`ACTIVE` \| `INACTIVE` only).
 
-**Not updatable via this PATCH:** `loyaltyPoints`, `creditBalance`. Slice 2 POS applies loyalty settlement in **session only** after zero-pay complete (display on Sale Completed). Authoritative cloud mutation is a planned gap (§15.3).
+**Status rules:** Only `ACTIVE` ↔ `INACTIVE`. Pending / rejected customers cannot be edited via this PATCH (use approve/reject). Illegal status jumps → `400`.
+
+**Not updatable via this PATCH:** `loyaltyPoints`, `creditBalance`, `source`, pending→active (approve route), reject.
 
 Response objects may include `loyaltyPoints` and `creditBalance`. Desktop Select Customer **must not** surface `creditBalance` as Baki (product lock: no Baki).
+
+**Owner web client:** Details enables Edit → `/customers/:id/edit`; phone-check ignores the same customer; unsaved-changes guard; success returns to Details.
 
 ---
 
@@ -749,7 +776,7 @@ M2 already accepts `total: 0` and payment `amount: 0` (`nonnegative`). Desktop m
 ### `GET /api/v1/sales`
 
 **Auth:** Bearer (any authenticated). No `restrictTo`.  
-**Purpose:** Paged tenant sales list. **M6 E.** Owner web Sales table = **Batch H** (live).
+**Purpose:** Paged tenant sales list. **M6 E.** Owner web Sales table = **Batch H** (live). Desktop Transactions list = **Prod Batch P13** (online; store-scoped for cashier JWT).
 
 **Query:** `q` (receiptNo / eventId / customer name|phone / cashier name), `paymentMethod` (`CASH`\|`CARD`\|`MFS`), `userId`, `customerId`, `from`, `to`, `limit` (default 25, max 100), `offset` (default 0). Date-only `to` (UTC midnight) is treated as **end of that UTC day**.
 
@@ -765,7 +792,7 @@ Cashiers are store-scoped when JWT `storeId` is set.
 
 **Auth:** Same as list. **`:id` is Prisma `Sale.id`** (list returns both `id` and `receiptNo`; `receiptNo` as the path param is **404**).
 
-Same payload shape and redaction as a list row. **404** if missing / other tenant. Owner web Transaction Details = **M6 I** (live).
+Same payload shape and redaction as a list row. **404** if missing / other tenant. Owner web Transaction Details = **M6 I** (live). Desktop Transactions detail = **Prod Batch P13** (prefer cloud by id; local fallback).
 
 ### `GET /api/v1/owner/dashboard`
 
@@ -791,7 +818,7 @@ Same payload shape and redaction as a list row. **404** if missing / other tenan
 
 **Auth:** Same OWNER-only. **M6 J.** Inventory list UI = live.
 
-**Query:** `q` (name / generic / SKU / barcode), `tab` = `all` \| `low` \| `out` \| `expiring30` \| `expiring90` \| `expired` (default `all`), `limit` (max 100, default 25), `offset`.
+**Query:** `q` (name / generic / SKU / barcode), `tab` = `all` \| `low` \| `out` \| `expiring30` \| `expiring90` \| `expired` (default `all`), optional `supplierId` (**Prod P4** — products linked via ACTIVE `Batch.supplierId` and/or purchase-order lines for that supplier; same rule as Supplier Details products), `limit` (max 100, default 25), `offset`.
 
 **Envelope:** `{ status, message, data, meta }`. `meta.total` / `limit` / `offset` required.
 
@@ -1043,8 +1070,8 @@ Checks earn lock, print + card + MFS stubs/TODOs, Receipt Preview 80/58 dynamic 
 | F4 Generic Substitutes | Invent modal; focus rule: search row → cart line → else toast; Enter → Select Batch |
 | Settings — Pharmacy / Receipt Header | localStorage `pharmacyHeaderStore` (tenant+store); Owner/Manager edit, Cashier view-only; Receipt Preview + print model resolve with stub fallback |
 | Force Offline / Stay Offline | Sticky localStorage `forceOfflineStore`; badge menu + Settings Connectivity; probes ignored until Go Online |
-| Transactions List | Local `transactionLogStore` (tenant+store) appended on completed sale; **no** cloud `GET /sales` (TODO) |
-| Transactions Detail + Reprint | Items / totals / method / customer / loyalty; Receipt Preview reuse; Reprint → print stub |
+| Transactions List | **Prod P13:** online `GET /api/v1/sales` (store-scoped) + merge local-only pending ingest; offline `transactionLogStore` (tenant+store) |
+| Transactions Detail + Reprint | **Prod P13:** prefer `GET /sales/:id`; fallback local snapshot; Receipt Preview + print stub until S2 |
 | Shift Open / Close | Local `shiftStore` (tenant+store); Counter Ready Active Shift reads it; **soft gate:** New Sale [F2] requires open shift (toast + opens Shift panel); connectivity badge unchanged; **no** cloud shift API (TODO when authorized) |
 | Create Customer on POS | **Removed** (AF) |
 
@@ -1052,7 +1079,7 @@ Checks earn lock, print + card + MFS stubs/TODOs, Receipt Preview 80/58 dynamic 
 
 | Need | Notes |
 |------|-------|
-| Cloud sales **list** API | Prefer over local transaction log when authorized (ask before inventing) |
+| ~~Cloud sales **list** API~~ | **DONE Prod P13** — desktop uses existing M6 E `GET /sales` + `GET /sales/:id` |
 | Cloud **shift** open/close API | Replace local `shiftStore` when authorized |
 | Owner web Create Customer | `apps/web` — not desktop |
 | Real Tauri **printer IPC** | Still open (§16.3) |
@@ -1072,51 +1099,56 @@ Checks shift store helpers, Shift UI + Counter Ready wiring, Slice 5 DoD source 
 
 ---
 
-## 18. M3 Slice 6 — Hold / Park Sale (Batch AP)
+## 18. Hold / Park Sale (M3 Slice 6 AP + Prod P12 cloud)
 
-**No new Express routes** were added for Slice 6. Hold is a **desktop-only** invent: park the active cart on this terminal, ring another sale, resume later. Stock is **not** reserved.
+**M3 Slice 6** shipped local soft holds. **Prod Batch P12** adds store-scoped cloud soft holds (still **no** stock reservation).
 
-### 18.1 Cloud routes used in Slice 6
+### 18.1 Cloud routes (Prod P12)
 
-| Desktop capability | Route(s) | Notes |
-|--------------------|----------|-------|
-| Session / health / catalog / customers / tenders | Same as §14–§17 | Unchanged |
-| Resume stock/expiry recheck (online) | `GET /batches?productId=` (existing Select Batch list) | Live lots for strip/clamp; Force Offline / browser offline → local catalog cache |
-| Sale tenders | `POST /sales/ingest` | **Unchanged.** Mid-payment Hold **aborts** card/MFS stubs and must **not** ingest / Sale Completed |
-| Cloud hold / reserve | **None** | Do not invent a hold API until authorized |
+| Method | Path | Auth | Roles | Description |
+|--------|------|------|-------|-------------|
+| POST | `/api/v1/held-sales` | Bearer | `CASHIER`, `MANAGER`, `OWNER` | Create soft hold; optional client `id` for offline push; store max **3** |
+| GET | `/api/v1/held-sales` | Bearer | same | List active `HELD` for JWT store (newest first) |
+| GET | `/api/v1/held-sales/:heldSaleId` | Bearer | same | Get one active hold |
+| POST | `/api/v1/held-sales/:heldSaleId/discard` | Bearer | same | Mark `DISCARDED` |
+| POST | `/api/v1/held-sales/:heldSaleId/resume-ack` | Bearer | same | Mark `RESUMED` after desktop soft recheck + cart restore |
 
-### 18.2 Desktop-only (no cloud)
+**Locks:** Soft hold only — does **not** change `quantityOnHand`. Max 3 **store-scoped** when online. Reconnect: cloud canonical; push local-only holds if not discarded. Mid-payment Hold still aborts card/MFS stubs and must **not** ingest.
+
+Resume stock/expiry recheck (online) still uses existing `GET /batches?productId=` (unchanged). Sale tenders still `POST /sales/ingest` (unchanged).
+
+### 18.2 Desktop
 
 | Feature | Behavior |
 |---------|----------|
-| `heldSaleStore` | localStorage `pharmasync.heldSales.<tenantId>.<storeId>`; **max 3**; newest first; 4th Hold → toast, no overwrite |
-| Snapshot | Cart lines (incl. FEFO override meta) + customer + loyalty. **Does not** persist cash-received / card-approved / MFS processing drafts |
-| Hold [F6] | Sale view, cart ≥1 line — including while Payment / Cash / Card / MFS / loyalty modals are open. Lands **empty New Sale** (shift stays open; F2 soft gate unchanged) |
-| Held Sales list | Cart **Held n/3 [F7]** (toggle); ↑/↓ · ←/→ Resume / Discard · Enter · Esc; Discard → ConfirmDialog; **no Tab** |
-| Resume | Only if active cart empty; else toast. Soft recheck: strip missing/expired/unsellable; clamp short stock; if **none** remain sellable, **keep** the hold |
-| Payment safety | `abortOpenTenders` + epoch guard: abort card/MFS stub controllers; close modals; skip in-flight ingest |
-| Persistence | Survives reload on **that terminal** only — not shared across terminals |
+| Online | Cloud CRUD via `cloudHeldSales`; local `heldSaleStore` mirrors cloud cache |
+| Offline | Existing `heldSaleStore` localStorage; max 3 per terminal |
+| Go Online | `reconcileHeldSalesOnOnline` — push local-only, then replace local with cloud list |
+| Snapshot | Cart lines (incl. FEFO override meta) + customer + loyalty. **Does not** persist tender drafts |
+| Hold [F6] | Same UX; mid-payment aborts card/MFS stubs |
+| Held Sales list | F7; ↑/↓ · ←/→ Resume / Discard · Enter · Esc; **no Tab** |
+| Resume | Soft recheck strip/clamp; resume-ack on cloud when online |
 
-### 18.3 TODOs (Slice 6 exit — do not forget)
+```bash
+npm run smoke:prod-p12 -w @r2a/desktop
+```
 
-| Need | Notes |
+### 18.3 Still deferred
+
+| Item | Notes |
 |------|-------|
-| Hard stock **reservation** | Soft hold only today — not started |
-| Cloud hold / multi-terminal shared holds | Replace local `heldSaleStore` when authorized |
-| Cloud sales **list** / **shift** APIs | Still open (§17.3) |
-| Owner web Create Customer | `apps/web` — not desktop |
-| Real Tauri **printer IPC** / **card** SDK / **MFS** APIs | Still open (§16.3); MFS = backend-confirmed status, no cashier Trx |
-| ~~M4 sync flush worker~~ | **Done in M4** (§19) |
+| Hard reservation / inventory lock on holds | Explicitly out of scope (soft hold only) |
+| Auto-expiry sweeper for `expiresAt` | Optional field only; no sweeper in P12 |
 
-### 18.4 Slice 6 exit smoke
+### 18.4 Historical Slice 6 exit smoke
 
 ```bash
 npm run smoke:m3ap -w @r2a/desktop
 ```
 
-Checks held-sale store max-3 + local TODO, soft resume recheck (strip/clamp / keep hold), App F6 Hold + F7 Held list + card/MFS abort wiring, i18n en + bn-BD, catalog §18, no M4 / no cloud hold route.
+Checks held-sale store max-3 + soft recheck + F6/F7 abort wiring. Cloud hold routes are covered by `smoke:prod-p12`.
 
-**Manual UI path:** Open shift → New Sale → add line(s) → Hold [F6] (empty New Sale; Held 1/3) → add another sale → **F7** Held list → Resume (soft recheck toast if stripped/clamped) / Discard confirm; Hold during Card/MFS processing → stubs abort, no Sale Completed; reload → held list persists; 4th Hold → capacity toast.
+**Manual UI path (P12):** Online F6 on terminal A → F7 on terminal B (same store) shows the hold; Resume / Discard sync via cloud; Force Offline → local holds; Go Online reconciles (cloud canonical + push local-only).
 
 ---
 
@@ -1383,7 +1415,7 @@ All Owner web interface copy uses `en` / `bn-BD` translation keys. Runtime produ
 | `GET` | `/api/v1/sales/:id` | Any authenticated; `:id` is `Sale.id` |
 | `GET` | `/api/v1/owner/dashboard` | OWNER only; sales/profit/trend/payment/cashier/inventory KPIs |
 | `GET` | `/api/v1/owner/inventory-summary` | OWNER only; product/on-hand/value and risk counts |
-| `GET` | `/api/v1/owner/inventory` | OWNER only; paged inventory rows with cost/sell/margin |
+| `GET` | `/api/v1/owner/inventory` | OWNER only; paged inventory rows with cost/sell/margin; optional `supplierId` (Prod P4) |
 | `GET` | `/api/v1/owner/products/:id` | OWNER only; product, units, lots, FEFO ranks, recent ledger |
 | `GET` | `/api/v1/owner/batches/:id` | OWNER only; batch status/version, references, revisions, adjustments |
 | `GET` | `/api/v1/owner/expiry` | OWNER only; expiry buckets, supplier/return metadata, max 500 rows |
@@ -1433,9 +1465,18 @@ Not part of Slice 1: Purchasing/Supplier/PO UI, Manager web, customer/staff/repo
 
 ---
 
-## 22. M6 — Slice 2 APIs (in progress)
+## 22. M6 — Slice 2 APIs (DONE)
 
-Slice 2 **P–AB** is complete. **AC–AD are deferred.** Overall M6 remains in progress. Supplier, PO, GRN, and return-manifest cloud APIs are live. Owner web has live Purchasing, Create PO, PO Details, Receive against PO, Suppliers, Expiry Returns, and Create Return Manifest. `/suppliers/returns/:manifestId` stays a parked placeholder. Slice 3 **AE–AM DONE** (Customers + POS Create + approve/reject). Slice 4 **Staff AN–AV DONE** (list/add/details/edit/deactivate/reactivate).
+Slice 2 **P–AD** is **complete** (2026-09-18). Overall M6 remains **IN PROGRESS** (production track Waves 3+; Manager web / n8n / RLS / bi-di still out of scope). Supplier, PO, GRN, and return-manifest cloud APIs are live (**OWNER-only**). Owner web has live Purchasing, Create PO, PO Details, Receive against PO, Suppliers, Add Supplier, Supplier Details, Expiry Returns, Create Return Manifest, and Manifest Details (Dispatch / Decision / Complete). Manager and Cashier receive `403` on `/owner/*` purchasing routes and cannot use Owner web.
+
+### 22.0 Dual receive (locked)
+
+| Path | When | Implementation |
+|------|------|----------------|
+| Inventory → Receive Stock | Ad-hoc / opening stock / no PO | Existing `POST /api/v1/batches` (Slice 1 / desktop Settings Receive) |
+| Purchasing → Receive against PO | Goods vs a purchase order | `POST /api/v1/owner/purchase-orders/:poId/receipts` creates confirmed GRN + linked Batch rows + RECEIVE events; updates PO remaining qty |
+
+Same lot table. No offline GRN. Desktop Settings Receive stays ad-hoc only.
 
 ### 22.1 Suppliers
 
@@ -1448,13 +1489,13 @@ All routes are tenant-scoped from the JWT and protected by `restrictTo("OWNER")`
 | `GET` | `/api/v1/owner/suppliers/:supplierId` | Tenant supplier detail and relation counts |
 | `PATCH` | `/api/v1/owner/suppliers/:supplierId` | Partial update, including `HOLD`/active state |
 
-There is no supplier delete route. Name and non-null registration number are tenant-unique; conflicts return `409`.
+There is no supplier delete route. Name and non-null registration number are tenant-unique; conflicts return `409`. Owner web Add Supplier / Supplier Details / **Edit Supplier** (`/suppliers/:id/edit`, Prod P2) consume these routes.
 
 ### 22.2 Purchase orders
 
 | Method | Path | Contract |
 |--------|------|----------|
-| `GET` | `/api/v1/owner/purchase-orders` | Query `q`, `status`, `supplierId`, `limit`, `offset`; returns `meta.total` and header `kpis` |
+| `GET` | `/api/v1/owner/purchase-orders` | Query `q`, `status`, `supplierId`, `limit`, `offset`; returns `meta.total` and header `kpis`. Owner web Purchasing list sends `supplierId` when deep-linked from Supplier Details (Prod P3). |
 | `POST` | `/api/v1/owner/purchase-orders` | Creates `SENT` by default; explicit `DRAFT` is Save as Draft |
 | `GET` | `/api/v1/owner/purchase-orders/:poId` | Supplier/store/creator, product lines, quantities, costs, and receipt collection |
 | `PATCH` | `/api/v1/owner/purchase-orders/:poId` | Replaces/updates draft fields and lines; non-draft PO returns `409` |
@@ -1475,7 +1516,7 @@ The transaction:
 - Writes a positive `InventoryEvent` RECEIVE with reason `PURCHASE_ORDER_RECEIPT`.
 - Increments `PurchaseOrderLine.qtyReceived` and moves the PO to `PARTIALLY_RECEIVED` or `RECEIVED`.
 
-Success `201` returns `data: { receipt, purchaseOrder }`. There is no draft GRN or offline GRN queue. Inventory's existing ad-hoc `POST /batches` receive path remains separate.
+Success `201` returns `data: { receipt, purchaseOrder }`. There is no draft GRN or offline GRN queue. Inventory's existing ad-hoc `POST /batches` receive path remains separate (see **§22.0 Dual receive**).
 
 ### 22.4 Supplier return queue and manifests
 
@@ -1490,16 +1531,36 @@ Success `201` returns `data: { receipt, purchaseOrder }`. There is no draft GRN 
 
 Manifest numbers are server-generated as `SRM-YYMMDD-####`. Dispatch derives a unique event id per line from the operation id; replaying the same operation returns `meta.idempotent: true` even after later lifecycle transitions and never deducts stock twice. A rejected return is terminal and does not auto-restore stock.
 
-### 22.5 Batch Q–U verification
+**Owner web:** Expiry Returns queue → Create Return Manifest → Manifest Details with Dispatch / Decision / Complete modals (Batches AA–AC). Preparing a manifest does not move stock; dispatch does.
+
+### 22.5 Owner web routes (Slice 2)
+
+| Screen | Route | Batch |
+|--------|-------|-------|
+| Purchasing | `/purchasing` | T |
+| Create Purchase Order | `/purchasing/new` | U |
+| Purchase Order Details | `/purchasing/:poId` | V |
+| Receive against PO | `/purchasing/:poId/receive` | W |
+| Suppliers | `/suppliers` | X |
+| Add Supplier | `/suppliers/new` | Y |
+| Supplier Details | `/suppliers/:supplierId` | Z |
+| Expiry Returns | `/suppliers/returns` | AA |
+| Create Return Manifest | `/suppliers/returns/new` | AB |
+| Manifest Details | `/suppliers/returns/:manifestId` | AC |
+
+Export / Print / More Actions, Review Reorder Suggestions, and View All Receipts stay disabled/parked unless a later production batch unlocks them. Edit Supplier is live (Prod P2). **View All POs** is live (Prod P3): Supplier Details → `/purchasing?supplierId=…`. **View All Products** is live (Prod P4): Supplier Details → `/inventory?supplierId=…` (additive inventory `supplierId` query).
+
+### 22.6 Slice 2 exit verification (Batch AD)
 
 ```bash
-npm run smoke:m6q -w @r2a/server
-npm run smoke:m6r -w @r2a/server
-npm run smoke:m6t -w @r2a/web
-npm run smoke:m6u -w @r2a/web
+npm run smoke:m6s2 -w @r2a/web
 ```
 
-Results on 2026-08-18: `smoke:m6q` **18/18 PASS**; `smoke:m6r` **17/17 PASS**; `smoke:m6t` **PASS** (Purchasing list); `smoke:m6u` **PASS** (Create Purchase Order; no stock write).
+Runs, in order: `smoke:m6q` → `smoke:m6r` (server Supplier/PO/GRN/return APIs) → `smoke:m6s` → `smoke:m6t` … `smoke:m6ac` (Owner web Slice 2 UI) → `smoke:m6s1` (Slice 1 composed regression). Batch S/U source guards were lightly refreshed so later-slice nav and shared `purchaseOrders` receipts helpers do not false-fail the historical Batch S/U assertions.
+
+**Slice 2 scope delivered:** P (Prisma/Zod) · Q (Supplier + PO APIs) · R (GRN + return lifecycle APIs) · S (Purchasing/Suppliers nav) · T–W (Purchasing UI + dual receive) · X–Z (Suppliers UI) · AA–AC (Expiry Returns + Create Manifest + Manifest Details) · AD (catalog §22 + composed smoke). Manager web remains later / out of this track.
+
+Batch AD result: `smoke:m6s2` **PASS** on 2026-09-18.
 
 ---
 
@@ -1522,7 +1583,7 @@ All routes are tenant-scoped from the JWT. `POST /customers` is role-aware (not 
 
 **Ingest guard:** `POST /sales/ingest` and `POST /sync/ingest` — if `customerId` is supplied the customer must be `ACTIVE` (else `400` / `404`).
 
-**Unchanged:** `PATCH /customers/:id` remains Owner+Manager only; no Inactive mutation. Cashiers cannot create/edit customers; Manager create goes to Pending.
+**Unchanged auth:** `PATCH /customers/:id` remains Owner+Manager only (cashier `403`). **Prod P1:** PATCH body additively accepts `dateOfBirth` / `gender` / `address` / `status` (`ACTIVE`↔`INACTIVE` only); Owner web Edit Customer live at `/customers/:id/edit`. Cashiers cannot create/edit customers; Manager create goes to Pending.
 
 ### 23.1 Status matrix
 
@@ -1605,12 +1666,16 @@ Batch AV result: `smoke:m6av` **PASS** on 2026-08-21.
 | GET | `/api/v1/owner/shifts` | Bearer | **`OWNER`** | List shifts (filters: `status`, `userId`, `q`, `from`, `to`, `limit`, `offset`) |
 | GET | `/api/v1/owner/shifts/:shiftId` | Bearer | **`OWNER`** | Shift detail + payment breakdown + activity timeline |
 | POST | `/api/v1/owner/shifts/:shiftId/resolve` | Bearer | **`OWNER`** | Resolve flagged shift — `varianceDecision` (`ACCEPTED_DIFFERENCE` / `COUNT_CORRECTED` / `OTHER`) + optional note |
+| POST | `/api/v1/owner/shifts/:shiftId/cash-count-request` | Bearer | **`OWNER`** | **Prod P10** — request cash count on **OPEN** shift (`note?`); sets `cashCountStatus=REQUESTED` |
+| POST | `/api/v1/owner/shifts/:shiftId/cash-count-request/cancel` | Bearer | **`OWNER`** | **Prod P10** — cancel pending request (`REQUESTED` → `CANCELLED`) |
 
 **Business rules:**
 - Owner can view all shifts across users/stores
 - Resolve transitions `FLAGGED` → `CLOSED` and records review metadata
 - Activity timeline via `ShiftActivityEvent` rows
-
+- **Prod P10:** Owner requests cash count on OPEN shifts only; cashier desktop polls `GET /shifts/active` and surfaces a banner; completing counted cash via `POST /shifts/active/close` marks request `COMPLETED` (no second cash ledger)
+- Additive Shift fields: `cashCountStatus` (`NONE`\|`REQUESTED`\|`CANCELLED`\|`COMPLETED`), `cashCountRequestedAt`, `cashCountRequestedByUserId`, `cashCountNote`, `cashCountCancelledAt`, `cashCountCompletedAt`
+- Activity types added: `CASH_COUNT_REQUESTED`, `CASH_COUNT_CANCELLED`
 ### 25.3 Sale ingest — shiftId
 
 `saleIngestSchema` now accepts optional `shiftId`. When present, server validates the shift is OPEN for the cashier+store and links the sale. Omitted `shiftId` is accepted for backward compatibility.
@@ -1628,6 +1693,96 @@ npm run smoke:m6ax -w @r2a/server
 ```
 
 Batch AX result: `smoke:m6ax` **19/19 PASS** on 2026-08-22.
+
+### 25.10 Request Cash Count (Prod Batch P10)
+
+**Goal:** Owner requests cash count on an OPEN shift; cashier desktop surfaces the request; counted cash still goes through existing close-shift / variance path (no second ledger).
+
+| Method | Path | Auth | Roles | Description |
+|--------|------|------|-------|-------------|
+| POST | `/api/v1/owner/shifts/:shiftId/cash-count-request` | Bearer | **`OWNER`** | Body `{ note? }` — set `cashCountStatus=REQUESTED` |
+| POST | `/api/v1/owner/shifts/:shiftId/cash-count-request/cancel` | Bearer | **`OWNER`** | Cancel pending → `CANCELLED` |
+| GET | `/api/v1/shifts/active` | Bearer | `CASHIER`, `MANAGER` | Returns cash-count fields for desktop poll |
+
+**UI:** Owner Shift Management + Shift Details enable Request Cash Count. Desktop Counter Ready + Shift panel banner; cashier enters counted cash via Close Shift. Close with pending request → `COMPLETED`.
+
+```bash
+npm run smoke:prod-p10 -w @r2a/web
+```
+
+### 25.11 Terminal presence (Prod Batch P11)
+
+**Goal:** Desktop heartbeats; Owner Dashboard shows live Online / Offline / Forced Offline dots. No Manager web. No invented terminals.
+
+| Method | Path | Auth | Roles | Description |
+|--------|------|------|-------|-------------|
+| POST | `/api/v1/terminals/heartbeat` | Bearer | `CASHIER`, `MANAGER`, `OWNER` | Body `{ terminalId, forceOffline?, userAgent? }` — upsert `TerminalPresence` |
+| GET | `/api/v1/owner/terminals/presence` | Bearer | **`OWNER`** | List reported terminals + computed `status` |
+
+**Locks:**
+- Heartbeat continues under Force Offline with `forceOffline: true` (Owner sees Forced Offline, not silent drop).
+- Stale threshold: `TERMINAL_PRESENCE_STALE_MS` = 45s (desktop interval ~20s).
+- Owner Dashboard **Terminals** card polls presence; empty when none reported.
+
+```bash
+npm run smoke:prod-p11 -w @r2a/web
+```
+
+### 25.12 Cloud held sales (Prod Batch P12)
+
+**Goal:** Soft holds sync to cloud when online; F6/F7 shared across terminals in the same store; offline falls back to local; **no** stock reservation; max 3 store-scoped.
+
+See **§18** for full route table + desktop reconcile lock (cloud canonical; push local-only on Go Online).
+
+```bash
+npm run smoke:prod-p12 -w @r2a/desktop
+```
+
+### 25.13 Desktop Transactions → cloud (Prod Batch P13)
+
+**Goal:** Desktop Transactions list/detail read store sales from existing **M6 E** `GET /api/v1/sales` (+ `GET /sales/:id`) when online; offline keep local `transactionLogStore`; merge local-only rows until ingest flush. **No new Express routes.** Owner web Sales (H) / Detail (I) unchanged.
+
+| Desktop | Behavior |
+|---------|----------|
+| Online list | `GET /api/v1/sales?limit=100` (cashier store-scoped via JWT) + merge local-only |
+| Online detail | Prefer `GET /api/v1/sales/:id`; fallback list/local snapshot |
+| Offline | Local `transactionLogStore` only |
+| Reprint | Print stub until Wave 5 S2 |
+
+```bash
+npm run smoke:prod-p13 -w @r2a/desktop
+```
+
+### 25.14 Catalog CSV/XLSX import (Prod Batch P14)
+
+**Goal:** Owner web bulk catalog onboarding. Route: `/inventory/import` (Inventory CTA **Import Catalog**).
+
+| Method | Path | Auth | Notes |
+|--------|------|------|-------|
+| POST | `/api/v1/owner/catalog/import/dry-run` | Bearer · **OWNER** | Body `{ fileName, contentBase64 }` — parse CSV/XLSX; report create/update/error per row |
+| POST | `/api/v1/owner/catalog/import/commit` | Bearer · **OWNER** | Body `{ rows[] }` — transactional upsert by **sku** + replace units |
+
+**Caps:** max file **2 MiB**; max **2000** data rows. Stable key = `sku` (tenant-scoped). Units: always PIECE×1; optional `stripFactor` / `boxFactor` (BOX must be divisible by STRIP). **No** cost/sell columns. No desktop Excel path. No bi-di / n8n.
+
+```bash
+npm run smoke:prod-p14 -w @r2a/web
+```
+
+### 25.15 GRN Save as Draft (Prod Batch P15)
+
+**Goal:** Incomplete Receive-against-PO form can be saved and resumed. Confirm still posts existing Batch R `POST .../receipts` (stock). Supplier Add + Return Manifest **Save as Draft** stay disabled with honest hints.
+
+| Method | Path | Auth | Notes |
+|--------|------|------|-------|
+| GET | `/api/v1/owner/purchase-orders/:poId/receipt-draft` | Bearer · **OWNER** | Returns draft or `null` |
+| PUT | `/api/v1/owner/purchase-orders/:poId/receipt-draft` | Bearer · **OWNER** | Upsert JSON payload (invoice/delivery/date + line lots) — **no stock** |
+| DELETE | `/api/v1/owner/purchase-orders/:poId/receipt-draft` | Bearer · **OWNER** | Discard draft |
+
+**Model:** `GoodsReceiptDraft` (one per PO). Confirm receipt deletes the draft. PO must be `SENT` or `PARTIALLY_RECEIVED`.
+
+```bash
+npm run smoke:prod-p15 -w @r2a/web
+```
 
 ### 25.6 Desktop cloud shift (Batch AY)
 
@@ -1670,7 +1825,7 @@ Owner web Staff page includes **Shift Management** → `/staff/shifts`.
 - Shift Activity timeline from `ShiftActivityEvent`
 - Audit Information rail
 - View POS Activity → `/sales?userId=...&from=...&to=...`
-- Request Cash Count disabled
+- Request Cash Count **live** (Prod P10) — Owner modal → `POST /owner/shifts/:shiftId/cash-count-request`; desktop banner + close-shift counted cash
 - Flagged details can open Review Cash Variance
 - Resolved variance details show Variance Review card (`varianceDecision`, note, adjustment reference, review date)
 - Generate Shift Report disabled
@@ -1794,7 +1949,13 @@ Batch BE result: `smoke:m6be` **PASS** on 2026-08-22.
 
 **Navigation:** Reports Dashboard `/reports` → Sales card **View Report** → `/reports/sales`.
 
-**Page behavior:**
+**Prod P5 additive (2026-09-18):** Inventory Report UI live at `/reports/inventory` — composes existing `GET /owner/inventory-summary`, `GET /owner/inventory` (low/out), and `GET /owner/expiry` (**no new aggregate route**). Reports Dashboard Inventory **View Report** + Status CTA enabled. CSV export enabled in Prod P7.
+
+**Prod P6 additive (2026-09-18):** Purchase Report UI live at `/reports/purchasing` (route lock; not `/reports/purchases`) — composes existing `GET /owner/purchase-orders` (**no new aggregate route**). Reports Dashboard Purchase **View Report** + Purchasing Status CTA enabled. CSV export enabled in Prod P7.
+
+**Prod P7 additive (2026-09-18):** Client CSV export (no new API) on Sales / Inventory / Purchase reports, Audit dashboard + detail lines, Shift detail summary, Expiry Returns. Thermal **Print** remains disabled pending Wave 5 S2. `smoke:prod-p7` PASS.
+
+### 26.3 Exit verification (Batch BF)
 
 - Full-scroll Sales Report page: KPI row, sales chart, payment summary, insight widgets, top selling medicines, and Recent Sales Transactions.
 - Date preset control supports Last 30 Days and Last 7 Days.
@@ -1802,7 +1963,7 @@ Batch BE result: `smoke:m6be` **PASS** on 2026-08-22.
 - Recent transaction invoice rows navigate to `/sales/:id`.
 - View All Staff Performance navigates to `/staff/shifts`.
 - Export Report is disabled with a hint.
-- Inventory and Purchase report View Report actions stay disabled.
+- Inventory report View Report enabled later (Prod P5); Purchase report View Report enabled later (Prod P6).
 - All user-facing text uses `apps/web` i18n (`en` and `bn-BD`).
 
 Verification:
@@ -1813,7 +1974,7 @@ npm run smoke:m6bf -w @r2a/web
 
 Batch BF result: `smoke:m6bf` **PASS** on 2026-08-22.
 
-### 26.3 Slice 6 exit (Batch BG)
+### 26.4 Slice 6 exit (Batch BG)
 
 **Composed smoke:**
 
@@ -1827,33 +1988,76 @@ Runs, in order: `smoke:m6be` (server Sales Report API) → `smoke:m6bf` (web Sal
 
 Batch BG result: `smoke:m6s6` PASS on 2026-08-22.
 
-### 26.4 M6 Batch BI — Audit + FEFO APIs
+---
 
-Batch BI adds API-only audit and FEFO review functionality. Owner web pages are still gated to Batches BJ–BK.
+## 26A. Enhance D2 — Product Movement Report
+
+**Track:** Owner Dashboard Intelligence ([`ENHANCE_DASHBOARD_INTELLIGENCE_EXECUTION.md`](ENHANCE_DASHBOARD_INTELLIGENCE_EXECUTION.md)) — **DONE** (D1–D4).
+
+| Method | Path | Auth | Roles | Description |
+|--------|------|------|-------|-------------|
+| GET | `/api/v1/owner/reports/product-movement` | Bearer | **`OWNER`** | Per-product demand / movement bands from live `SaleItem` aggregation |
+
+**Query:** `preset=last30|last90|last180` (default `last90` when no `from`/`to`), optional `from`/`to`, `storeId`, `band=all|high_demand|steady|low_sell|no_sales`, `q`, `limit` (default 50, max 200), `offset`.
+
+**Bands (definitions):** Rank sellers (`unitsSold > 0`) by units DESC → top **20%** `high_demand`, middle **60%** `steady`, bottom **20%** `low_sell`; `no_sales` = zero units with on-hand &gt; 0. Omit zero-sold + zero-on-hand. KPIs + pagination over filtered set. No Baki/credit fields.
+
+**Owner web:** `/reports/product-movement` (+ Reports hub card; Dashboard “Demand & slow movers” CTA).
+
+**Smoke:** `npm run smoke:enhance-d2 -w @r2a/server` (API) · `npm run smoke:enhance-d2 -w @r2a/web` (static UI). Track exit: `npm run smoke:enhance-dash-intel`.
+
+## 26B. Enhance D3 — Stock Priority Alarms
+
+**Track:** Owner Dashboard Intelligence ([`ENHANCE_DASHBOARD_INTELLIGENCE_EXECUTION.md`](ENHANCE_DASHBOARD_INTELLIGENCE_EXECUTION.md)) — **DONE** (D1–D4).
+
+| Method | Path | Auth | Roles | Description |
+|--------|------|------|-------|-------------|
+| GET | `/api/v1/owner/reports/stock-priority` | Bearer | **`OWNER`** | Sale-priority stock alarms (P1–P4) derived from shared product-movement aggregation |
+
+**Query:** `preset=last30|last90|last180` (default `last90`), optional `from`/`to`, `storeId`, `limit` (default 25, max 100).
+
+**Priorities (definitions):** `P1_restock_now` (high_demand + out) → `P2_restock_soon` (high_demand + low / cover &lt; 7) → `P3_watch_cover` (high_demand + cover &lt; 14, not already P1/P2) → `P4_review_slow` (low_sell/no_sales + onHand &gt; 0). Sorted P1→P4 then `avgDailyUnits` DESC. One priority per product (highest wins). No Baki/credit fields.
+
+**Owner web:** Dashboard **Stock priority** panel (top 8; 90/180 preset; P1→`/inventory?tab=out`, P2→`/inventory?tab=low`, row→product, footer→product-movement).
+
+**Smoke:** `npm run smoke:enhance-d3 -w @r2a/server` (API) · `npm run smoke:enhance-d3 -w @r2a/web` (static UI). Track exit: `npm run smoke:enhance-dash-intel`.
+
+## 27. M6 Slice 7 — Audit & FEFO (StockAudit + FEFO Violations)
+
+### 27.1 StockAudit & FEFO Violations Schema + Seed (Batch BH)
+
+- Prisma models: `StockAudit`, `StockAuditLine`, `StockAuditActivityEvent`, `FefoViolationRecord`.
+- Enums: `StockAuditStatus` (`IN_PROGRESS` | `UNDER_REVIEW` | `COMPLETED` | `VARIANCE_FOUND`), `StockAuditLineStatus` (`MATCHES` | `DISCREPANCY`), `FefoViolationStatus` (`OPEN` | `CORRECTED` | `DISMISSED`), `StockAuditActivityType` (`CREATED` | `COUNT_STARTED` | `VARIANCE_DETECTED` | `REVIEWED` | `FEFO_CORRECTED` | `COMPLETED`).
+- Shared Zod schemas in `@r2a/shared-types` (`audit.ts`).
+- Deterministic seed for stock audits (`IN_PROGRESS`, `COMPLETED`, `VARIANCE_FOUND`) and FEFO violations (`OPEN`, `CORRECTED`).
+
+### 27.2 Audit & FEFO APIs + Ingest Hook (Batch BI)
 
 Owner-only routes:
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/api/v1/owner/audit/dashboard` | Audit KPIs, recent audits, and audit activity |
-| GET | `/api/v1/owner/audits` | Paged audit list with `q`, `status`, `from`, `to`, `limit`, `offset` |
-| GET | `/api/v1/owner/audits/:auditId` | Audit detail with lines, activity, and linked FEFO violations |
-| POST | `/api/v1/owner/audits/:auditId/review` | Review `UNDER_REVIEW` or `VARIANCE_FOUND` audit with `decision: COMPLETE | KEEP_VARIANCE` |
-| POST | `/api/v1/owner/fefo-violations/:violationId/correct` | Mark an OPEN FEFO violation corrected with `correctionNote` |
+| Method | Path | Roles | Purpose |
+|--------|------|-------|---------|
+| GET | `/api/v1/owner/audit/dashboard` | **`OWNER`** | Audit KPIs, recent audits, and audit activity |
+| GET | `/api/v1/owner/audits` | **`OWNER`** | Paged audit list with `q`, `status`, `from`, `to`, `limit`, `offset` |
+| GET | `/api/v1/owner/audits/:auditId` | **`OWNER`** | Audit detail with lines, activity, and linked FEFO violations |
+| POST | `/api/v1/owner/audits/:auditId/review` | **`OWNER`** | Review `UNDER_REVIEW` or `VARIANCE_FOUND` audit with `decision: COMPLETE | KEEP_VARIANCE` |
+| POST | `/api/v1/owner/fefo-violations/:violationId/correct` | **`OWNER`** | Mark an OPEN FEFO violation corrected with `correctionNote` |
 
 Owner/Manager routes:
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| POST | `/api/v1/audits/start` | Start an `IN_PROGRESS` stock audit for a store/location |
-| POST | `/api/v1/audits/:auditId/lines` | Replace counted batch lines and snapshot system qty/cost |
-| POST | `/api/v1/audits/:auditId/submit` | Submit audit; variance becomes `VARIANCE_FOUND`, otherwise `UNDER_REVIEW` |
+| Method | Path | Roles | Purpose |
+|--------|------|-------|---------|
+| POST | `/api/v1/audits/start` | **`OWNER`**, **`MANAGER`** | Start an `IN_PROGRESS` stock audit for a store/location |
+| POST | `/api/v1/audits/:auditId/lines` | **`OWNER`**, **`MANAGER`** | Replace counted batch lines and snapshot system qty/cost |
+| POST | `/api/v1/audits/:auditId/submit` | **`OWNER`**, **`MANAGER`** | Submit audit; variance becomes `VARIANCE_FOUND`, otherwise `UNDER_REVIEW` |
+
+**Prod P8 additive (2026-09-18):** Desktop Settings → Stock Audit UI (OWNER/MANAGER) calls the three routes above online-only. No offline queue. Owner web `/audit` remains the review surface.
 
 Sale ingest hook:
 
-- `POST /api/v1/sales/ingest` now creates an OPEN `FefoViolationRecord` when a sale line has `fefoOverride: true` and the chosen batch is not the current FEFO batch.
-- Idempotent sale replay still returns the existing sale and does not create duplicate FEFO violation records.
-- Cashiers still cannot access owner audit routes or start/submit stock audits.
+- `POST /api/v1/sales/ingest` creates an OPEN `FefoViolationRecord` when a sale line has `fefoOverride: true` and the chosen batch is not the current FEFO batch.
+- Idempotent sale replay returns the existing sale and does not duplicate FEFO violation records.
+- Cashiers cannot access owner audit routes or start/submit stock audits.
 
 Verification:
 
@@ -1863,12 +2067,177 @@ npm run smoke:m6bi -w @r2a/server
 
 Batch BI result: `smoke:m6bi` **PASS** on 2026-08-22.
 
+### 27.3 Owner Web Audit & FEFO Dashboard (Batch BJ)
+
+**Route:** `/audit`
+
+**Navigation:** Sidebar `Audit & FEFO` (`/audit`) live in Owner web.
+
+**Page behavior:**
+- KPI cards: Total Audits, Under Review, Discrepancies, Open FEFO Alerts.
+- Expiry Monitoring card with quick link to Expiry Management.
+- FEFO Compliance Overview card with compliance rate and breakdown.
+- Recent Stock Audits list with search, status filters, and View links to `/audit/:auditId`.
+- Activity Log with recent audit actions.
+- Generate Report button disabled with tooltip hint.
+- Full localization in `en` and `bn-BD`.
+
+Verification:
+
+```bash
+npm run smoke:m6bj -w @r2a/web
+```
+
+Batch BJ result: `smoke:m6bj` **PASS** on 2026-08-22.
+
+### 27.4 Owner Web Audit Detail + Review Modal + Apply FEFO (Batch BK)
+
+**Route:** `/audit/:auditId`
+
+**Page behavior:**
+- Header with audit number, location, status badge, audit timestamps, and Review Audit CTA (for `UNDER_REVIEW` or `VARIANCE_FOUND` audits).
+- Summary KPI cards: Items Checked, Discrepancies, Variance Amount (৳).
+- Audited stock lines table with medicine name, batch number, system qty, counted qty, difference, and variance amount.
+- FEFO Violation card for linked violations with "Apply FEFO Correction" modal action.
+- Activity timeline showing audit lifecycle events with timestamps and actors.
+- Notes card displaying audit notes.
+- Review Audit modal: choose decision (`COMPLETE` | `KEEP_VARIANCE`) and optional review notes, posting to `POST /api/v1/owner/audits/:auditId/review`.
+- Apply FEFO Correction modal: enter correction notes, posting to `POST /api/v1/owner/fefo-violations/:violationId/correct`.
+- Generate Report action remains disabled with hint.
+- Full localization in `en` and `bn-BD`.
+
+Verification:
+
+```bash
+npm run smoke:m6bk -w @r2a/web
+```
+
+Batch BK result: `smoke:m6bk` **PASS** on 2026-08-22.
+
+### 27.5 Slice 7 Exit (Batch BL)
+
+**Composed smoke:**
+
+```bash
+npm run smoke:m6s7 -w @r2a/web
+```
+
+Runs, in order: `smoke:m6bi` (server Audit + FEFO APIs) → `smoke:m6bj` (web Audit Dashboard) → `smoke:m6bk` (web Audit Detail + Modals) → `smoke:m6s6` (prior Slice 6 composed regression).
+
+**Slice 7 scope delivered:** BH (Prisma + Zod + seed) · BI (Audit + FEFO APIs + ingest hook) · BJ (Audit & FEFO dashboard UI) · BK (Audit Detail UI + Review Audit modal + Apply FEFO correction) · BL (catalog §27 + composed smoke:m6s7 + RBAC + status sync). Slice 2 AC–AD remain **deferred**; Slice 8 Settings is not started.
+
+Batch BL result: `smoke:m6s7` **PASS** on 2026-09-10.
+
+## 28. M6 Slice 8 — Settings + Help + Owner Profile
+
+### 28.1 Business profile schema + settings APIs (Batch BM)
+
+- Prisma: Tenant/Store business profile fields (`legalName`, licenses, VAT, contact, address, website, `currency` BDT default, `timezone`, `openingHours`) + `ConfigurationActivityEvent` / `ConfigurationActivityType`.
+- Shared Zod in `@r2a/shared-types` (`settings.ts`).
+- OWNER-only routes:
+
+| Method | Path | Roles | Purpose |
+|--------|------|-------|---------|
+| GET / PATCH | `/api/v1/owner/settings/business` | **`OWNER`** | Read/update pharmacy + primary store profile; returns configuration timeline |
+| GET / PATCH | `/api/v1/owner/settings/account` | **`OWNER`** | Read/update owner name/phone; recent account activity |
+| POST | `/api/v1/owner/settings/account/change-password` | **`OWNER`** | Change password (current + new ≥ 8 chars); records `PASSWORD_CHANGED` |
+| GET | `/api/v1/owner/settings/activity` | **`OWNER`** | Paged configuration activity |
+| GET | `/api/v1/owner/help/status` | **`OWNER`** | System health + support contact for Help page |
+
+Manager/Cashier receive **403** on all of the above.
+
+Verification:
+
+```bash
+npm run smoke:m6bm -w @r2a/server
+```
+
+Batch BM result: `smoke:m6bm` **PASS** (18/18; re-verified Prod W0A 2026-09-18).
+
+### 28.2 Settings hub + Business Profile (Batch BN)
+
+**Routes:** `/settings` · `/settings/business`
+
+**Navigation:** Sidebar Settings live.
+
+**Page behavior:**
+- Settings hub with 6 cards; only **Business Profile** clickable.
+- Disabled cards (Branch, Roles, Preferences, Security, Audit & Data) keep i18n hints.
+- Business Profile form: pharmacy + primary store fields; currency BDT read-only; Save via `PATCH /owner/settings/business`; configuration timeline from API.
+- Full localization in `en` and `bn-BD`.
+
+Verification:
+
+```bash
+npm run smoke:m6bn -w @r2a/web
+```
+
+Batch BN result: `smoke:m6bn` **PASS** on 2026-09-18.
+
+### 28.3 Account Profile + footer Owner Profile (Batch BO)
+
+**Route:** `/settings/account`
+
+**Navigation:** Footer **Owner Profile** live → `/settings/account`.
+
+**Page behavior:**
+- Personal info edit (name/phone); email/role read-only.
+- Change password flow via `POST /owner/settings/account/change-password`.
+- 2FA / sessions / notification toggles disabled with hints.
+- Recent activity from account API.
+- Full localization in `en` and `bn-BD`.
+
+Verification:
+
+```bash
+npm run smoke:m6bo -w @r2a/web
+```
+
+Batch BO result: `smoke:m6bo` **PASS** on 2026-09-18.
+
+### 28.4 Help & Support + footer Help (Batch BP)
+
+**Route:** `/help`
+
+**Navigation:** Footer **Help** live → `/help`.
+
+**Page behavior:**
+- Help Center / Contact Support / System Status cards.
+- Contact + System Status consume live `GET /owner/help/status`.
+- FAQ accordion (static i18n).
+- Recent Tickets empty/disabled; Create Ticket disabled with hint.
+- Full localization in `en` and `bn-BD`.
+
+Verification:
+
+```bash
+npm run smoke:m6bp -w @r2a/web
+```
+
+Batch BP result: `smoke:m6bp` **PASS** on 2026-09-18.
+
+### 28.5 Slice 8 Exit (Batch BQ)
+
+**Composed smoke:**
+
+```bash
+npm run smoke:m6s8 -w @r2a/web
+```
+
+Runs, in order: `smoke:m6bm` (server settings/help APIs) → `smoke:m6bn` (Settings hub + Business Profile) → `smoke:m6bo` (Account Profile) → `smoke:m6bp` (Help) → `smoke:m6s7` (prior Slice 7 composed regression).
+
+**Slice 8 scope delivered:** BM (schema + APIs) · BN (Settings hub + Business Profile) · BO (Account Profile + footer Owner Profile) · BP (Help & Support + footer Help) · BQ (catalog §28 + composed smoke:m6s8 + RBAC + status sync). Slice 2 P–AD **DONE** (Prod Wave 2). Branch/Roles/Preferences/Security/Audit&Data hub cards and Help tickets remain intentionally disabled.
+
+Batch BQ result: `smoke:m6s8` **PASS** on 2026-09-18.
+
 ---
 
-## 27. Change log
+## 29. Change log
 
 | Date | Change |
 |------|--------|
+| 2026-09-18 | **M6 Batch AD / Slice 2 EXIT DONE:** §22 finalized (suppliers, POs, GRNs, return manifests, dual-receive note, Owner web routes); composed `smoke:m6s2` (m6q→m6r→m6s→m6t…m6ac→m6s1) registered and PASS; Slice 2 complete; Manager web still later / out of production track. |
+| 2026-09-18 | **M6 Batch BQ / Slice 8 EXIT DONE:** §28 Settings + Help catalog added; composed `smoke:m6s8` (m6bm→m6bn→m6bo→m6bp→m6s7) registered and PASS; Slice 8 complete; Slice 2 AC–AD were Prod Wave 2. |
 | 2026-08-09 | Initial API catalog after M2 Batches A–H completion |
 | 2026-08-11 | Confirmed: M3 Batch K (Active Cart) adds **no** new cloud routes; sale ingest still payment-slice only |
 | 2026-08-11 | Documented cloud vs desktop FEFO (sellable preferred on search); Napa 4-lot demo seed; POS flow uses `GET /batches?productId=` for Select Batch |
@@ -1899,6 +2268,7 @@ Batch BI result: `smoke:m6bi` **PASS** on 2026-08-22.
 | 2026-08-18 | **M6 Batch U:** §22 live Create Purchase Order (ACTIVE-supplier dropdown, product line search, Add Suggested Items, Save as Draft / Create SENT / Cancel, order-summary rail; no inventory effect); seed ships 3 ACTIVE suppliers (Beximco · Square · SMC); `smoke:m6u` PASS |
 | 2026-08-19 | **M6 Batch AA:** live Owner Expiry Returns queue (`GET /owner/returns/queue`); additive queue `kpis` + `suppliers` in meta; Inventory Prepare Supplier Return enabled; Create Manifest page still Batch AB; `smoke:m6aa` PASS |
 | 2026-08-19 | **M6 Batch AB:** live Create Return Manifest at `/suppliers/returns/new` (session draft from queue, supplier policy, editable return qty); `POST /owner/return-manifests` with optional `supplierReference`; Save as Draft disabled; no dispatch/stock-out; `smoke:m6ab` PASS |
+| 2026-09-18 | **M6 Batch AC:** live Manifest Details at `/suppliers/returns/:manifestId` + Dispatch / Decision / Complete modals; uses existing return-manifest lifecycle routes (**no new cloud routes**); `smoke:m6ac` PASS; next = Batch AD exit |
 | 2026-08-19 | **M6 Slice 2 AC–AD deferred. Slice 3 planned:** Customers + POS pending-approval registration; `POST /customers` stays Owner-only until AF; catalog §23 at AM |
 | 2026-08-19 | **M6 Batch AE:** Customer Prisma status/source/profile + partial unique phone + Zod stubs; POST still OWNER-only; no new routes; catalog §23 still at AM |
 | 2026-08-20 | **M6 Batch AF:** §23 — role-aware `POST /customers` (Owner Active, Cashier/Manager Pending + extras stripped), Active-only `GET /customers`, `GET /customers/phone-check`, Owner `GET /owner/customers` + `/:id` + approve/reject (KPIs, audit, purchase history, loyalty activity), `GET /sales?customerId=` additive filter, ingest Active-only customer guard, Cashier/Manager 403 on `/owner/customers*`; `PATCH /customers/:id` unchanged; `smoke:m6af` |
@@ -1913,4 +2283,25 @@ Batch BI result: `smoke:m6bi` **PASS** on 2026-08-22.
 | 2026-08-22 | **M6 Batch BD / Slice 5 EXIT DONE:** §25.9 — catalog §25 (shift routes, ingest `shiftId`, reports dashboard), composed `smoke:m6s5` (m6ax→m6ay→m6az/m6ba/m6bb/m6bc→m6s1/m6s3/m6av), status/master-plan/RBAC synchronized; M6 remains IN PROGRESS (Slice 2 AC–AD deferred) |
 | 2026-08-22 | **M6 Batch BE / Slice 6 Sales Report API DONE:** OWNER-only `GET /owner/reports/sales`; shared Zod response; default last 30 days, range filters, optional tenant-scoped `storeId`, prior-period trends, daily bars, payment summary, top category/cashiers/medicines, recent transactions; `smoke:m6be` PASS. |
 | 2026-08-22 | **M6 Batch BG / Slice 6 EXIT DONE:** §26 Sales Report catalog added; composed `smoke:m6s6` (m6be→m6bf→m6s5) registered and PASS; M6 remains IN PROGRESS with Slice 2 AC–AD deferred and Slice 7 gated. |
-| 2026-08-22 | **M6 Batch BI DONE:** Audit + FEFO APIs live; owner dashboard/list/detail/review/correct, owner/manager audit start/lines/submit, and sale ingest FEFO violation hook; `smoke:m6bi` PASS. No Owner web audit UI until BJ–BK. |
+| 2026-08-22 | **M6 Batch BH / Slice 7 Schema & Seed DONE:** StockAudit + FEFO violation models/enums/Zod and deterministic seed applied. |
+| 2026-08-22 | **M6 Batch BI / Slice 7 APIs DONE:** Audit + FEFO APIs live; owner dashboard/list/detail/review/correct, owner/manager audit start/lines/submit, and sale ingest FEFO violation hook; `smoke:m6bi` PASS. |
+| 2026-09-10 | **M6 Batch BK / Slice 7 Audit Detail & Modals DONE:** Owner web Audit Detail live at `/audit/:auditId` with KPIs, line items, linked FEFO card, timeline, notes, Review Audit modal, and Apply FEFO Correction modal; `smoke:m6bk` PASS. |
+| 2026-09-18 | **Prod Batch P1:** Owner web Edit Customer live at `/customers/:id/edit` — enables Details Edit CTA; `PATCH /customers/:id` additively accepts DOB/gender/address + `ACTIVE`↔`INACTIVE` status (pending/rejected blocked); phone-check ignores same customer; `smoke:prod-p1` PASS |
+| 2026-09-18 | **Prod Batch P2:** Owner web Edit Supplier live at `/suppliers/:id/edit`; PATCH ACTIVE↔HOLD (+ DRAFT if already); `smoke:prod-p2` PASS |
+| 2026-09-18 | **Prod Batch P3:** Supplier Details View All POs → `/purchasing?supplierId=…`; web PO list client sends `supplierId` to existing `GET /owner/purchase-orders`; filter chip + clear; `smoke:prod-p3` PASS |
+| 2026-09-18 | **Prod Batch P4:** Supplier Details View All Products → `/inventory?supplierId=…`; additive optional `supplierId` on `GET /owner/inventory` (ACTIVE batches + PO lines); filter chip + clear; `smoke:prod-p4` PASS |
+| 2026-09-18 | **Prod Batch P5:** Owner web Inventory Report `/reports/inventory` — composes inventory-summary + inventory (low/out) + expiry; no new aggregate API; dashboard Inventory CTAs enabled; export parked until P7; `smoke:prod-p5` PASS |
+| 2026-09-18 | **Prod Batch P6:** Owner web Purchase Report `/reports/purchasing` — composes `GET /owner/purchase-orders`; no new aggregate API; dashboard Purchase CTAs enabled; export parked until P7; `smoke:prod-p6` PASS |
+| 2026-09-18 | **Prod Batch P7:** Client CSV export on Sales/Inventory/Purchase reports, Audit list+lines, Shift detail, Expiry Returns (`lib/csvExport.ts`); no new API / no PDF / Print stays disabled (S2); `smoke:prod-p7` PASS |
+| 2026-09-18 | **Prod Batch P8:** Desktop Settings → Stock Audit (OWNER/MANAGER); online `POST /audits/start|lines|submit`; no offline queue; Owner web review unchanged; `smoke:prod-p8` PASS |
+| 2026-09-18 | **Prod Batch P9:** Owner web Review All Issues `/suppliers/issues` — composes `GET /owner/suppliers` attention; CTA enabled; no new API; `smoke:prod-p9` PASS; Wave 3 complete |
+| 2026-09-18 | **Prod Batch P10:** Request Cash Count — Shift `cashCount*` fields; OWNER `POST .../cash-count-request` (+ cancel); Owner web modal; desktop poll/banner; close completes request; `smoke:prod-p10` PASS |
+| 2026-09-18 | **Prod Batch P15 / Wave 4 DONE:** GRN Save as Draft — `GoodsReceiptDraft` + OWNER receipt-draft GET/PUT/DELETE; receive resume; Confirm clears draft; Supplier/Manifest drafts disabled with hints; §25.15; `smoke:prod-p15` PASS |
+| 2026-09-18 | **Prod Batch P14:** Owner Catalog Import `/inventory/import` — `POST /owner/catalog/import/dry-run` + `/commit`; CSV/XLSX parse; sku upsert + units; max 2 MiB / 2000 rows; §25.14; `smoke:prod-p14` PASS |
+| 2026-09-18 | **Prod Batch P13:** Desktop Transactions → cloud — reuses `GET /api/v1/sales` + `GET /sales/:id`; online store-scoped list/detail + local-only merge; offline local log; Owner web Sales unchanged; `smoke:prod-p13` PASS |
+| 2026-09-18 | **Prod Batch P12:** Cloud soft held sales — `HeldSale` + `/api/v1/held-sales` create/list/get/discard/resume-ack; desktop online cloud / offline local + Go Online reconcile; max 3 store-scoped; no stock reservation; §18 amended; `smoke:prod-p12` PASS |
+| 2026-09-18 | **Prod Batch P11:** Terminal presence — `TerminalPresence`; `POST /terminals/heartbeat` + `GET /owner/terminals/presence`; Dashboard Terminals card; Force Offline continues heartbeat with flag; `smoke:prod-p11` PASS |
+| 2026-09-19 | **Enhance Batch D4 / track exit:** Catalog §26A/§26B finalized (band + priority definitions); composed `smoke:enhance-dash-intel` (d1→d2→d3) PASS; Enhance Dashboard Intelligence track **DONE**. Production next unchanged = `Authorize Prod Batch S1`. |
+| 2026-09-18 | **Enhance Batch D3:** OWNER-only `GET /owner/reports/stock-priority` + shared Zod; Dashboard Stock priority panel (P1–P4); catalog §26B stub; `smoke:enhance-d3` (server + web) PASS. |
+| 2026-09-18 | **Enhance Batch D2:** OWNER-only `GET /owner/reports/product-movement` + shared Zod; `/reports/product-movement` UI (30/90/180, bands, search, CSV); catalog §26A stub; `smoke:enhance-d2` (server + web) PASS. |
+| 2026-09-10 | **M6 Batch BL / Slice 7 EXIT DONE:** §27 Audit & FEFO catalog added; composed `smoke:m6s7` (m6bi→m6bj→m6bk→m6s6) registered and PASS; Slice 7 complete; Slice 8 Settings gated. |

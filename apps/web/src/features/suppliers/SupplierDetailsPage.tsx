@@ -1,5 +1,6 @@
 import {
   PackageCheck,
+  Pencil,
   Plus,
   ShoppingCart,
   Truck,
@@ -28,8 +29,9 @@ import {
  * Live GET /owner/suppliers/:supplierId (OWNER only). KPIs, performance, the
  * purchase-order table and the products-supplied table are honest values
  * computed from what exists — zeros / em dashes when there is no data, never
- * invented numbers. View All POs / View All Products stay disabled because the
- * Purchasing list and Inventory search cannot yet filter by supplier.
+ * invented numbers. Edit Supplier navigates to `/suppliers/:id/edit` (Prod P2).
+ * View All POs deep-links to `/purchasing?supplierId=…` (Prod P3).
+ * View All Products deep-links to `/inventory?supplierId=…` (Prod P4).
  */
 export function SupplierDetailsPage({ supplierId }: { supplierId: string }) {
   const { t } = useLocale();
@@ -151,6 +153,16 @@ function SupplierDetailBody({
           <button
             type="button"
             className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground hover:bg-canvas"
+            onClick={() =>
+              onNavigate(`/suppliers/${encodeURIComponent(supplier.id)}/edit`)
+            }
+          >
+            <Pencil className="size-4" strokeWidth={1.75} />
+            {t("suppliers.detail.editSupplier")}
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground hover:bg-canvas"
             onClick={() => onNavigate("/suppliers/returns")}
           >
             <PackageCheck className="size-4 text-primary" strokeWidth={1.75} />
@@ -209,10 +221,15 @@ function SupplierDetailBody({
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.5fr_1fr]">
         <PurchaseOrdersCard
+          supplierId={supplier.id}
           purchaseOrders={purchaseOrders}
           onNavigate={onNavigate}
         />
-        <ProductsSuppliedCard products={products} />
+        <ProductsSuppliedCard
+          supplierId={supplier.id}
+          products={products}
+          onNavigate={onNavigate}
+        />
       </div>
     </div>
   );
@@ -417,9 +434,11 @@ function PerformanceRow({
 }
 
 function PurchaseOrdersCard({
+  supplierId,
   purchaseOrders,
   onNavigate,
 }: {
+  supplierId: string;
   purchaseOrders: SupplierFull["detail"]["purchaseOrders"];
   onNavigate: (to: string) => void;
 }) {
@@ -433,10 +452,12 @@ function PurchaseOrdersCard({
         </h2>
         <button
           type="button"
-          disabled
-          aria-disabled="true"
-          title={t("suppliers.detail.po.viewAllSoon")}
-          className="inline-flex cursor-not-allowed items-center gap-1 rounded-md border border-border bg-canvas px-2.5 py-1 text-xs font-medium text-muted"
+          className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground hover:bg-canvas"
+          onClick={() =>
+            onNavigate(
+              `/purchasing?supplierId=${encodeURIComponent(supplierId)}`,
+            )
+          }
         >
           {t("suppliers.detail.po.viewAll")}
         </button>
@@ -519,9 +540,13 @@ function PurchaseOrdersCard({
 }
 
 function ProductsSuppliedCard({
+  supplierId,
   products,
+  onNavigate,
 }: {
+  supplierId: string;
   products: SupplierFull["detail"]["products"];
+  onNavigate: (to: string) => void;
 }) {
   const { t } = useLocale();
 
@@ -533,10 +558,12 @@ function ProductsSuppliedCard({
         </h2>
         <button
           type="button"
-          disabled
-          aria-disabled="true"
-          title={t("suppliers.detail.products.viewAllSoon")}
-          className="inline-flex cursor-not-allowed items-center gap-1 rounded-md border border-border bg-canvas px-2.5 py-1 text-xs font-medium text-muted"
+          className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground hover:bg-canvas"
+          onClick={() =>
+            onNavigate(
+              `/inventory?supplierId=${encodeURIComponent(supplierId)}`,
+            )
+          }
         >
           {t("suppliers.detail.products.viewAll")}
         </button>

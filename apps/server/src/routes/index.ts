@@ -14,6 +14,8 @@ import ownerRouter from "../modules/owner/owner.router";
 import syncRouter from "../modules/sync/sync.router";
 import cashierShiftRouter from "../modules/shift/shift.router";
 import auditRouter from "../modules/audit/audit.router";
+import terminalRouter from "../modules/terminal/terminal.router";
+import heldSaleRouter from "../modules/heldSale/heldSale.router";
 
 /**
  * `/api/v1` mount — public auth + secured domain routes.
@@ -88,6 +90,8 @@ domainRouter.use("/customers", customerRouter);
 domainRouter.use("/sales", saleRouter);
 domainRouter.use("/shifts", cashierShiftRouter);
 domainRouter.use("/audits", auditRouter);
+domainRouter.use("/terminals", terminalRouter);
+domainRouter.use("/held-sales", heldSaleRouter);
 domainRouter.use("/owner", ownerRouter);
 domainRouter.use("/sync", syncRouter);
 

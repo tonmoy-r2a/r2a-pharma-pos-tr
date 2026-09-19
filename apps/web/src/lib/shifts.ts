@@ -4,6 +4,9 @@ export type ShiftStatus = "OPEN" | "CLOSED" | "FLAGGED";
 
 export type ShiftVarianceDecision = "ACCEPTED_DIFFERENCE" | "COUNT_CORRECTED" | "OTHER";
 
+/** Prod P10 — Owner cash-count request on Shift. */
+export type CashCountRequestStatus = "NONE" | "REQUESTED" | "CANCELLED" | "COMPLETED";
+
 export type ShiftUser = {
   id: string;
   name: string;
@@ -26,12 +29,25 @@ export type ShiftListRow = {
   cardSales: number | string;
   mfsSales: number | string;
   txnCount: number;
+  cashCountStatus?: CashCountRequestStatus | null;
+  cashCountRequestedAt?: string | null;
+  cashCountRequestedByUserId?: string | null;
+  cashCountNote?: string | null;
+  cashCountCancelledAt?: string | null;
+  cashCountCompletedAt?: string | null;
   user?: ShiftUser | null;
 };
 
 export type ShiftActivityRow = {
   id: string;
-  type: "OPENED" | "SALE_RECORDED" | "CLOSE_SUBMITTED" | "VARIANCE_REVIEWED" | "CLOSED";
+  type:
+    | "OPENED"
+    | "SALE_RECORDED"
+    | "CLOSE_SUBMITTED"
+    | "VARIANCE_REVIEWED"
+    | "CLOSED"
+    | "CASH_COUNT_REQUESTED"
+    | "CASH_COUNT_CANCELLED";
   note: string | null;
   createdAt: string;
 };
@@ -133,6 +149,37 @@ export async function resolveShiftVariance(
     {
       method: "POST",
       body: input,
+    },
+  );
+  return data;
+}
+
+export type ShiftCashCountRequestInput = {
+  note?: string;
+};
+
+/** Prod P10 — Owner requests cash count on an OPEN shift. */
+export async function requestCashCount(
+  shiftId: string,
+  input: ShiftCashCountRequestInput = {},
+): Promise<ShiftListRow> {
+  const { data } = await apiRequestEnvelope<ShiftListRow>(
+    `/api/v1/owner/shifts/${encodeURIComponent(shiftId)}/cash-count-request`,
+    {
+      method: "POST",
+      body: input,
+    },
+  );
+  return data;
+}
+
+/** Prod P10 — Owner cancels a pending cash-count request. */
+export async function cancelCashCountRequest(shiftId: string): Promise<ShiftListRow> {
+  const { data } = await apiRequestEnvelope<ShiftListRow>(
+    `/api/v1/owner/shifts/${encodeURIComponent(shiftId)}/cash-count-request/cancel`,
+    {
+      method: "POST",
+      body: {},
     },
   );
   return data;

@@ -8,9 +8,10 @@
 **RBAC contract:** [`ROLES_AND_PERMISSIONS.md`](ROLES_AND_PERMISSIONS.md)  
 **Authorized plan:** [`.cursor/plans/m6_slice_6_execution.plan.md`](.cursor/plans/m6_slice_6_execution.plan.md) (2026-08-22)
 
-**Status of Slices 6–8:** **IN PROGRESS** — Slice 6 **BE–BG DONE**; Slice 7 **BH–BJ DONE**; **BK–BQ not started**. Screens shared 2026-08-22.  
-**Prerequisite:** Milestone 0–**5** DONE; M6 Slice 1 **A–O DONE**; W1–W6 **DONE**; Slice 2 **P–AB DONE** (AC–AD **deferred**); Slice 3 **AE–AM DONE**; Slice 4 **AN–AV DONE**; Slice 5 **AW–BD DONE**.  
-**Do not start:** BK+ until user says `Authorize M6 Batch BK` (or the matching later batch). Slice 2 AC/AD, Manager web, n8n, RLS, bi-di, M7 multi-branch, Inventory/Purchase report detail pages (not shared), desktop stock-audit count UI (later batch) — unless re-authorized.
+**Status of Slices 6–8:** **DONE** (product scope for Slices 6–8) — Slice 6 **BE–BG DONE**; Slice 7 **BH–BL DONE**; Slice 8 **BM–BQ DONE** 2026-09-18. **Next = `Authorize M6 Batch AC`** (Prod Wave 2 / [`MILESTONE_6_EXECUTION.md`](MILESTONE_6_EXECUTION.md)).  
+**Production track:** [`PRODUCTION_REMAINING_EXECUTION.md`](PRODUCTION_REMAINING_EXECUTION.md) — Wave 0 **DONE**; Wave 1 **BN–BQ DONE**. UI invent allowed via `invent to match theme` after the mandatory ask-stop (see master).  
+**Prerequisite:** Milestone 0–**5** DONE; M6 Slice 1 **A–O DONE**; W1–W6 **DONE**; Slice 2 **P–AB DONE** (AC–AD via Prod Wave 2); Slice 3 **AE–AM DONE**; Slice 4 **AN–AV DONE**; Slice 5 **AW–BD DONE**; Slice 6 **BE–BG DONE**; Slice 7 **BH–BL DONE**; Slice 8 **BM–BQ DONE**.  
+**Do not start:** AC until user says `Authorize M6 Batch AC`. Out of scope unless re-authorized: Manager web, n8n, RLS, bi-di, M7.
 
 ---
 
@@ -385,10 +386,10 @@ Catalog **§27** at Batch BL.
 | **BH** | Prisma + Zod + seed | BG | No — **DONE** |
 | **BI** | Audit + FEFO APIs + ingest hook | BH | No — **DONE** |
 | **BJ** | Audit nav + Audit & FEFO dashboard | BI | **Audit & FEFO — DONE** |
-| **BK** | Audit Detail + Review modal + Apply FEFO | BJ | **Audit Detail — ask first**; Review modal ask/invent |
-| **BL** | Slice 7 exit | BH–BK | No |
+| **BK** | Audit Detail + Review modal + Apply FEFO | BJ | **Audit Detail — DONE** |
+| **BL** | Slice 7 exit | BH–BK | No — **DONE** |
 
-Order: **BH → BI → BJ → BK → BL**.
+Order: **BH → BI → BJ → BK → BL**. **BH–BL DONE**; next = **BM** when authorized.
 
 ---
 
@@ -496,11 +497,11 @@ When done, paste the short M6 Batch BJ report.
 
 ### Tasks
 
-- [ ] `/audit/:auditId` detail page (summary, line table, FEFO card, timeline, notes)
-- [ ] Review Audit modal → `POST /owner/audits/:id/review`
-- [ ] Apply FEFO Correction → `POST /owner/fefo-violations/:id/correct`
-- [ ] Generate Report / Review Audit header actions per mock
-- [ ] i18n en + bn-BD; `smoke:m6bk`
+- [x] `/audit/:auditId` detail page (summary, line table, FEFO card, timeline, notes)
+- [x] Review Audit modal → `POST /owner/audits/:id/review`
+- [x] Apply FEFO Correction → `POST /owner/fefo-violations/:id/correct`
+- [x] Generate Report / Review Audit header actions per mock
+- [x] i18n en + bn-BD; `smoke:m6bk`
 
 ### Exit check
 
@@ -528,10 +529,10 @@ When done, paste the short M6 Batch BK report.
 
 ### Tasks
 
-- [ ] [`Completed_API_lists.md`](Completed_API_lists.md) **§27**
-- [ ] [`ROLES_AND_PERMISSIONS.md`](ROLES_AND_PERMISSIONS.md) audit/FEFO rows
-- [ ] Composed smoke; `Current_Status.md` Slice 7 live
-- [ ] Do **not** start Slice 8 BM
+- [x] [`Completed_API_lists.md`](Completed_API_lists.md) **§27**
+- [x] [`ROLES_AND_PERMISSIONS.md`](ROLES_AND_PERMISSIONS.md) audit/FEFO rows
+- [x] Composed smoke; `Current_Status.md` Slice 7 live
+- [x] Do **not** start Slice 8 BM
 
 ### Agent prompt
 
@@ -594,11 +595,11 @@ Catalog **§28** at Batch BQ.
 
 | Batch | Title | Depends | Re-share? |
 |-------|-------|---------|-----------|
-| **BM** | Business profile schema + settings APIs | BL | No |
-| **BN** | Settings nav + hub + Business Profile | BM | **Settings hub + Business Profile — ask first** |
-| **BO** | Account Profile + footer Owner Profile | BM | **Account Profile — ask first** |
-| **BP** | Help & Support + footer Help | BM | **Help & Support — ask first** |
-| **BQ** | Slice 8 exit | BM–BP | No |
+| **BM** | Business profile schema + settings APIs | BL | No — **DONE** |
+| **BN** | Settings nav + hub + Business Profile | BM | **DONE** 2026-09-18 (`invent to match theme`) |
+| **BO** | Account Profile + footer Owner Profile | BM | **DONE** 2026-09-18 (`invent to match theme`) |
+| **BP** | Help & Support + footer Help | BM | **DONE** 2026-09-18 (`invent to match theme`) |
+| **BQ** | Slice 8 exit | BM–BP | No — **DONE** 2026-09-18 |
 
 Order: **BM → BN → BO → BP → BQ**.
 
@@ -612,11 +613,11 @@ Order: **BM → BN → BO → BP → BQ**.
 
 ### Tasks
 
-- [ ] Prisma Tenant/Store extensions + `ConfigurationActivityEvent`
-- [ ] Zod + routes listed above
-- [ ] Record activity on business save + password change
-- [ ] `smoke:m6bm`
-- [ ] No Settings/Help nav live yet
+- [x] Prisma Tenant/Store extensions + `ConfigurationActivityEvent`
+- [x] Zod + routes listed above
+- [x] Record activity on business save + password change
+- [x] `smoke:m6bm`
+- [x] No Settings/Help nav live yet
 
 ### Exit check
 
@@ -638,21 +639,23 @@ When done, paste the short M6 Batch BM report.
 
 ## Batch BN — Settings hub + Business Profile (Slice 8)
 
+**Status:** **DONE** 2026-09-18 — invent to match theme; `smoke:m6bn` PASS. Next = `Authorize M6 Batch BO`.
+
 **Goal:** Settings nav + hub + Business Profile form.
 
-**Re-share screen:** **Settings** hub + **Business Profile** — **ask first** (may be two screenshots).
+**Re-share screen:** **Settings** hub + **Business Profile** — asked; user replied **`invent to match theme`**.
 
 ### Tasks
 
-- [ ] `nav.ts` settings `live: true`, `/settings`, `/settings/business`
-- [ ] Settings hub: 6 cards; only Business Profile clickable
-- [ ] Business Profile form + timeline + Save
-- [ ] Disabled cards with hints (Branch, Roles, Preferences, Security, Audit & Data)
-- [ ] i18n en + bn-BD; `smoke:m6bn`
+- [x] `nav.ts` settings `live: true`, `/settings`, `/settings/business`
+- [x] Settings hub: 6 cards; only Business Profile clickable
+- [x] Business Profile form + timeline + Save
+- [x] Disabled cards with hints (Branch, Roles, Preferences, Security, Audit & Data)
+- [x] i18n en + bn-BD; `smoke:m6bn`
 
 ### Exit check
 
-- `smoke:m6bn` PASS. Help/Owner Profile footer still disabled until BO/BP
+- [x] `smoke:m6bn` PASS. Help/Owner Profile footer still disabled until BO/BP
 
 ### Agent prompt
 
@@ -670,21 +673,23 @@ When done, paste the short M6 Batch BN report.
 
 ## Batch BO — Account Profile (Slice 8)
 
+**Status:** **DONE** 2026-09-18 — invent to match theme; `smoke:m6bo` PASS. Next = `Authorize M6 Batch BP`.
+
 **Goal:** Account Profile page + footer Owner Profile live.
 
-**Re-share screen:** **Account Profile** — **ask first**.
+**Re-share screen:** **Account Profile** — asked; user replied **`invent to match theme`**.
 
 ### Tasks
 
-- [ ] `/settings/account` + footer `ownerProfile` live → same route
-- [ ] Personal info edit; change password flow
-- [ ] 2FA / sessions / notification toggles disabled with hints
-- [ ] Activity timeline from known events
-- [ ] i18n en + bn-BD; `smoke:m6bo`
+- [x] `/settings/account` + footer `ownerProfile` live → same route
+- [x] Personal info edit; change password flow
+- [x] 2FA / sessions / notification toggles disabled with hints
+- [x] Activity timeline from known events
+- [x] i18n en + bn-BD; `smoke:m6bo`
 
 ### Exit check
 
-- `smoke:m6bo` PASS
+- [x] `smoke:m6bo` PASS
 
 ### Agent prompt
 
@@ -702,21 +707,23 @@ When done, paste the short M6 Batch BO report.
 
 ## Batch BP — Help & Support (Slice 8)
 
+**Status:** **DONE** 2026-09-18 — invent to match theme; `smoke:m6bp` PASS.
+
 **Goal:** Help footer nav + Help & Support page.
 
-**Re-share screen:** **Help & Support** — **ask first**.
+**Re-share screen:** **Help & Support** — asked; user replied **`invent to match theme`**.
 
 ### Tasks
 
-- [ ] `nav.ts` help `live: true`, path `/help`
-- [ ] Help Center / Contact Support / System Status cards
-- [ ] FAQ accordion (static i18n)
-- [ ] Recent Tickets static/disabled; Create Ticket disabled
-- [ ] i18n en + bn-BD; `smoke:m6bp`
+- [x] `nav.ts` help `live: true`, path `/help`
+- [x] Help Center / Contact Support / System Status cards
+- [x] FAQ accordion (static i18n)
+- [x] Recent Tickets static/disabled; Create Ticket disabled
+- [x] i18n en + bn-BD; `smoke:m6bp`
 
 ### Exit check
 
-- `smoke:m6bp` PASS
+- [x] `smoke:m6bp` PASS
 
 ### Agent prompt
 
@@ -728,11 +735,13 @@ When done, paste the short M6 Batch BP report.
 
 **YOU DO:** Help nav opens; FAQ expands; System Status shows live health.
 
-**Next:** `Authorize M6 Batch BQ`.
+**Next:** ~~`Authorize M6 Batch BQ`~~ — **DONE**.
 
 ---
 
 ## Batch BQ — Slice 8 exit
+
+**Status:** **DONE** 2026-09-18 — catalog §28; `smoke:m6s8` PASS. Slice 8 complete.
 
 **Goal:** Catalog §28, `smoke:m6s8`, status/master/RBAC. M6 stays IN PROGRESS (AC–AD etc.).
 
@@ -740,11 +749,11 @@ When done, paste the short M6 Batch BP report.
 
 ### Tasks
 
-- [ ] [`Completed_API_lists.md`](Completed_API_lists.md) **§28**
-- [ ] Composed smoke for BM–BP + spot-check prior M6 smokes
-- [ ] Status + master plan + RBAC synchronized
-- [ ] This file BE–BQ checkboxes
-- [ ] Do **not** start n8n / RLS / bi-di / Batch AC without authorization
+- [x] [`Completed_API_lists.md`](Completed_API_lists.md) **§28**
+- [x] Composed smoke for BM–BP + spot-check prior M6 smokes
+- [x] Status + master plan + RBAC synchronized
+- [x] This file BE–BQ checkboxes
+- [x] Do **not** start n8n / RLS / bi-di / Batch AC without authorization
 
 ### Agent prompt
 
@@ -805,9 +814,18 @@ When done, paste the short M6 Batch report.
 
 | Date | Change |
 |------|--------|
+| 2026-09-18 | **M6 Batch BQ / Slice 8 EXIT completed:** `Completed_API_lists.md` §28; composed `smoke:m6s8` (m6bm→bn→bo→bp→m6s7) PASS; prior smoke stock/limit + Help/Owner Profile live assertions fixed for nested spot-check; Slice 8 complete. Next = `Authorize M6 Batch AC` (Prod Wave 2). |
+| 2026-09-18 | **M6 Batch BP completed:** Help footer live at `/help`; Help Center / Contact / System Status cards; FAQ accordion; tickets disabled; live `GET /owner/help/status`; invent to match theme; `smoke:m6bp` PASS. Next = `Authorize M6 Batch BQ`. |
+| 2026-09-18 | **M6 Batch BO completed:** Account Profile at `/settings/account`; footer Owner Profile live; personal info + change password; 2FA/sessions/notifications disabled with hints; activity timeline; invented to match theme; `smoke:m6bo` PASS. Next was `Authorize M6 Batch BP`. |
+| 2026-09-18 | **M6 Batch BN completed:** Settings nav live; hub (6 cards, Business Profile only clickable); Business Profile form + timeline + Save via live settings APIs; invented to match Admin Portal theme; Help/Owner Profile footer still disabled; `smoke:m6bn` PASS. Next was `Authorize M6 Batch BO`. |
+| 2026-09-18 | **Prod W0C / Wave 0 DONE:** Slice 8 reopened for production track. BM **DONE** (verified). **Next was `Authorize M6 Batch BN`.** BN–BQ not deferred; invent override via production master. |
+| 2026-09-18 | **Production track:** BN–BQ resumed via [`PRODUCTION_REMAINING_EXECUTION.md`](PRODUCTION_REMAINING_EXECUTION.md) Wave 1. BM remains DONE (verify in W0A). |
 | 2026-08-22 | **Slices 6–8 planned (BE–BQ not started).** New execution file split from `MILESTONE_6_EXECUTION.md`. Screens: Sales Report (scroll), Audit & FEFO, Audit Detail, Settings hub, Business Profile, Account Profile, Help & Support. Full StockAudit + FEFO violations (Slice 7). **Strict re-share gate:** agent must ask before UI; no silent prior upload. Next was `Authorize M6 Batch BE` after Slice 5 BD PASS. |
 | 2026-08-22 | **M6 Batch BE completed:** OWNER-only `GET /api/v1/owner/reports/sales` + shared Zod response; range and optional tenant-scoped `storeId`; prior-period trend fields; `smoke:m6be` PASS. No Owner web UI; Sales View Report remains disabled. Next = `Authorize M6 Batch BF` (ask for Sales Report screenshot first). |
 | 2026-08-22 | **M6 Batch BG / Slice 6 completed:** `Completed_API_lists.md` §26 added; composed `smoke:m6s6` registered and PASS; Slice 6 complete. Next was `Authorize M6 Batch BH`. |
 | 2026-08-22 | **M6 Batch BH completed:** StockAudit + StockAuditLine + StockAuditActivityEvent + FefoViolationRecord Prisma schema/migration, shared Zod `audit.ts`, deterministic audit/FEFO seed. `prisma migrate deploy`, `prisma db seed`, and `smoke:m2` PASS. No routes/UI. Next was `Authorize M6 Batch BI`. |
 | 2026-08-22 | **M6 Batch BI completed:** live audit/FEFO APIs plus sale ingest hook. OWNER routes: dashboard/list/detail/review/correct; OWNER/MANAGER routes: audit start/lines/submit; `smoke:m6bi` PASS. No Owner web audit UI. Next was `Authorize M6 Batch BJ` (now done). |
 | 2026-08-22 | **M6 Batch BJ completed:** Audit & FEFO nav live at `/audit`; dashboard consumes live audit dashboard/list APIs plus existing expiry API; Generate Report and advanced filters disabled; detail links route to `/audit/:auditId` placeholder until BK. `smoke:m6bj`, web lint, and web build PASS. Next = `Authorize M6 Batch BK` (ask for Audit Detail + Review modal decision first). |
+| 2026-09-10 | **M6 Batch BK completed:** live Audit Detail page at `/audit/:auditId` (summary cards, line items, linked FEFO card, timeline, notes); Review Audit modal with live review decision posting; Apply FEFO Correction modal with live correction posting; Generate Report disabled with hint; `smoke:m6bk`, web lint, and web build PASS. Next was `Authorize M6 Batch BL`. |
+| 2026-09-10 | **M6 Batch BL / Slice 7 completed:** `Completed_API_lists.md` §27 added; `ROLES_AND_PERMISSIONS.md` audit/FEFO rows updated; composed `smoke:m6s7` registered and PASS; Slice 7 complete. Next = `Authorize M6 Batch BM` (Settings hub). |
+| 2026-09-10 | **M6 Batch BM completed:** Tenant + Store business profile fields and `ConfigurationActivityEvent` Prisma schema/migration applied; shared Zod contracts in `@r2a/shared-types`; live OWNER routes `GET`/`PATCH /owner/settings/business`, `GET`/`PATCH /owner/settings/account`, `POST /owner/settings/account/change-password`, `GET /owner/settings/activity`, `GET /owner/help/status`; `smoke:m6bm` PASS (18/18). No Owner web settings UI yet. Next = `Authorize M6 Batch BN` (ask for Settings hub + Business Profile screens first). |

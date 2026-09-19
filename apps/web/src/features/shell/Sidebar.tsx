@@ -60,7 +60,7 @@ export function Sidebar({
   onClose?: () => void;
 }) {
   const { t } = useLocale();
-  const { path, navigate } = useOwnerPath();
+  const { path, pathname, navigate } = useOwnerPath();
 
   return (
     <aside
@@ -116,8 +116,13 @@ export function Sidebar({
           <NavButton
             key={item.id}
             item={item}
-            active={false}
-            onLiveClick={() => undefined}
+            active={Boolean(item.live && item.path && pathname === item.path)}
+            onLiveClick={() => {
+              if (item.live && item.path) {
+                navigate(item.path);
+                onClose?.();
+              }
+            }}
           />
         ))}
       </nav>

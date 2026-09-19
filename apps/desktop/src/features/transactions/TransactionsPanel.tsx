@@ -7,10 +7,16 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
-import { ChevronRight, LayoutList, Receipt, X } from "lucide-react";
+import { ChevronRight, LayoutList, Loader2, Receipt, X } from "lucide-react";
 import { useAuth } from "@/features/auth";
+import { useConnectivity } from "@/features/shell";
 import { TransactionDetailView } from "@/features/transactions/TransactionDetailView";
 import { useLocale } from "@/i18n";
+import {
+  getCloudSale,
+  listCloudSales,
+  mergeCloudWithLocal,
+} from "@/lib/cloudSales";
 import { formatCustomerPhone } from "@/lib/customerSearch";
 import { formatTaka } from "@/lib/format";
 import {
@@ -27,34 +33,64 @@ export type TransactionsPanelProps = {
 type PanelView = "list" | "detail";
 
 /**
- * Transactions — List (AJ) + Detail / Reprint (AK).
- * Local completed-sale log (no cloud GET /sales yet — TODO).
- * List: ↑/↓ · Enter → detail · Esc close.
- * Detail: items / totals / method / customer / loyalty + Receipt Preview;
- * Reprint → print stub. Esc / Back → list. No Tab. No Baki. No Shift.
+ * Transactions — List (AJ) + Detail / Reprint (AK) + Prod P13 cloud reads.
+ * Online: store-scoped `GET /sales` (+ detail by id); merge local-only pending ingest.
+ * Offline: local `transactionLogStore`. Reprint → print stub until S2.
+ * List: ↑/↓ · Enter → detail · Esc close. No Tab. No Baki.
  */
 export function TransactionsPanel({ onClose }: TransactionsPanelProps) {
   const { t } = useLocale();
   const { user } = useAuth();
+  const { isOnline } = useConnectivity();
   const titleId = useId();
   const listId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
 
   const [rows, setRows] = useState<LoggedTransaction[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [view, setView] = useState<PanelView>("list");
   const [selected, setSelected] = useState<LoggedTransaction | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
-  const reload = useCallback(() => {
-    if (!user?.tenantId) {
-      setRows([]);
-      return;
-    }
-    setRows(transactionLogStore.list(user.tenantId, user.storeId ?? null));
+  const localList = useCallback((): LoggedTransaction[] => {
+    if (!user?.tenantId) return [];
+    return transactionLogStore.list(user.tenantId, user.storeId ?? null);
   }, [user?.tenantId, user?.storeId]);
 
+  const reload = useCallback(async () => {
+    if (!user?.tenantId) {
+      setRows([]);
+      setListError(null);
+      setLoading(false);
+      return;
+    }
+
+    const local = localList();
+
+    if (!isOnline) {
+      setRows(local);
+      setListError(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setListError(null);
+    try {
+      const cloud = await listCloudSales({ limit: 100, offset: 0 });
+      setRows(mergeCloudWithLocal(cloud.items, local));
+    } catch {
+      setRows(local);
+      setListError(t("txns.cloudFailed"));
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.tenantId, isOnline, localList, t]);
+
   useEffect(() => {
-    reload();
+    void reload();
   }, [reload]);
 
   useEffect(() => {
@@ -71,14 +107,31 @@ export function TransactionsPanel({ onClose }: TransactionsPanelProps) {
     setFocusedIndex((i) => Math.min(Math.max(0, i), rows.length - 1));
   }, [rows.length]);
 
-  const openDetail = useCallback((entry: LoggedTransaction) => {
-    setSelected(entry);
-    setView("detail");
-  }, []);
+  const openDetail = useCallback(
+    async (entry: LoggedTransaction) => {
+      setSelected(entry);
+      setView("detail");
+      setDetailLoading(false);
+
+      if (!isOnline || !entry.saleId.trim()) return;
+
+      setDetailLoading(true);
+      try {
+        const cloud = await getCloudSale(entry.saleId);
+        if (cloud) setSelected(cloud);
+      } catch {
+        // Prefer cloud when available; keep local/list snapshot on failure.
+      } finally {
+        setDetailLoading(false);
+      }
+    },
+    [isOnline],
+  );
 
   const backToList = useCallback(() => {
     setView("list");
     setSelected(null);
+    setDetailLoading(false);
     queueMicrotask(() => panelRef.current?.focus());
   }, []);
 
@@ -120,7 +173,15 @@ export function TransactionsPanel({ onClose }: TransactionsPanelProps) {
 
   const focused = rows[focusedIndex] ?? null;
 
-  const emptyHint = useMemo(() => t("txns.emptyHint"), [t]);
+  const emptyHint = useMemo(
+    () => t(isOnline ? "txns.emptyHintCloud" : "txns.emptyHint"),
+    [t, isOnline],
+  );
+
+  const subtitle = useMemo(
+    () => t(isOnline ? "txns.subtitleCloud" : "txns.subtitle"),
+    [t, isOnline],
+  );
 
   const onKeyDownCapture = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") {
@@ -156,7 +217,7 @@ export function TransactionsPanel({ onClose }: TransactionsPanelProps) {
     if (event.key === "Enter") {
       event.preventDefault();
       event.stopPropagation();
-      if (focused) openDetail(focused);
+      if (focused) void openDetail(focused);
     }
   };
 
@@ -188,8 +249,10 @@ export function TransactionsPanel({ onClose }: TransactionsPanelProps) {
             </h2>
             <p className="truncate text-xs text-muted">
               {view === "detail"
-                ? t("txns.detailSubtitle")
-                : t("txns.subtitle")}
+                ? detailLoading
+                  ? t("txns.detailLoading")
+                  : t("txns.detailSubtitle")
+                : subtitle}
             </p>
           </div>
         </div>
@@ -205,6 +268,15 @@ export function TransactionsPanel({ onClose }: TransactionsPanelProps) {
 
       {view === "list" ? (
         <div className="flex min-h-0 flex-1 flex-col">
+          {listError ? (
+            <div
+              className="shrink-0 border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900"
+              role="status"
+            >
+              {listError}
+            </div>
+          ) : null}
+
           <div className="shrink-0 border-b border-border bg-shell/60 px-4 py-2">
             <div className="grid grid-cols-[7.5rem_minmax(0,1.1fr)_minmax(0,1.4fr)_5.5rem_5.5rem_1.5rem] gap-2 text-[10px] font-semibold uppercase tracking-wide text-muted">
               <span>{t("txns.colTime")}</span>
@@ -216,7 +288,16 @@ export function TransactionsPanel({ onClose }: TransactionsPanelProps) {
             </div>
           </div>
 
-          {rows.length === 0 ? (
+          {loading && rows.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-12 text-center">
+              <Loader2
+                className="size-8 animate-spin text-primary"
+                strokeWidth={1.75}
+                aria-hidden
+              />
+              <p className="text-sm text-muted">{t("txns.loading")}</p>
+            </div>
+          ) : rows.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-12 text-center">
               <Receipt
                 className="size-12 text-border"
@@ -233,6 +314,7 @@ export function TransactionsPanel({ onClose }: TransactionsPanelProps) {
               id={listId}
               role="listbox"
               aria-label={t("txns.listLabel")}
+              aria-busy={loading}
               className="min-h-0 flex-1 overflow-auto"
             >
               {rows.map((entry, index) => {
@@ -251,7 +333,7 @@ export function TransactionsPanel({ onClose }: TransactionsPanelProps) {
                       ].join(" ")}
                       onClick={() => {
                         setFocusedIndex(index);
-                        openDetail(entry);
+                        void openDetail(entry);
                       }}
                       onMouseEnter={() => setFocusedIndex(index)}
                     >

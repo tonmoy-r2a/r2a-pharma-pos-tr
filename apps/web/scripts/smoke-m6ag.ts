@@ -3,7 +3,7 @@
  * Run: npm run smoke:m6ag -w @r2a/web
  *
  * Source guards only (no live API). Customers becomes a live chrome route
- * (placeholder shells); Staff / Help / Owner Profile stay disabled.
+ * (placeholder shells). Later slices made Staff / Help / Owner Profile live.
  */
 
 import { readFileSync, readdirSync } from "node:fs";
@@ -90,12 +90,12 @@ function checkNavEnabled(): void {
     "Customers must declare path /customers",
   );
   assert(
-    /id:\s*"staff"[\s\S]*?live:\s*false/.test(nav) &&
-      /id:\s*"help"[\s\S]*?live:\s*false/.test(nav) &&
-      /id:\s*"ownerProfile"[\s\S]*?live:\s*false/.test(nav),
-    "Staff / Help / Owner Profile must remain disabled",
+    /id:\s*"staff"[\s\S]*?live:\s*true/.test(nav) &&
+      /id:\s*"help"[\s\S]*?live:\s*true/.test(nav) &&
+      /id:\s*"ownerProfile"[\s\S]*?live:\s*true/.test(nav),
+    "Staff / Help / Owner Profile must be live after later slices",
   );
-  console.log("  ✓ Customers nav live; Staff/Help/Owner Profile disabled");
+  console.log("  ✓ Customers nav live; Staff/Help/Owner Profile live (later slices)");
 }
 
 function checkOwnerPath(): void {

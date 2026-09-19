@@ -38,6 +38,7 @@ export type AppShellProps = {
   onOpenHeld?: () => void;
   onCloseHeld?: () => void;
   onResumeHeld?: (snapshot: HeldSaleSnapshot) => void | Promise<void>;
+  onDiscardHeld?: (snapshot: HeldSaleSnapshot) => void | Promise<void>;
   onHeldListChanged?: () => void;
   /**
    * Hide Active Cart and let `main` fill the workspace
@@ -95,6 +96,7 @@ export function AppShell({
   onOpenHeld,
   onCloseHeld,
   onResumeHeld,
+  onDiscardHeld,
   onHeldListChanged,
   hideCartPanel = false,
   footerStatus = null,
@@ -191,6 +193,7 @@ export function AppShell({
                   onClose={onCloseHeld}
                   cartHasItems={cartItemCount > 0}
                   onResume={onResumeHeld}
+                  onDiscard={onDiscardHeld}
                   onListChanged={onHeldListChanged}
                 />
               ) : null}

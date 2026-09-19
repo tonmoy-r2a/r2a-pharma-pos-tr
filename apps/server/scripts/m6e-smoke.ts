@@ -179,7 +179,7 @@ async function main(): Promise<void> {
   }
 
   const batches = await req(
-    `/batches?productId=${productId}&storeId=${owner.storeId}&limit=20`,
+    `/batches?productId=${productId}&storeId=${owner.storeId}&limit=100`,
     { token: owner.token },
   );
   const batchRows = Array.isArray(batches.body.data) ? batches.body.data : [];
@@ -191,7 +191,7 @@ async function main(): Promise<void> {
         typeof b.quantityOnHand === "number" &&
         b.quantityOnHand >= 1,
     );
-  const sellBatch = inStock[0] ?? asRecord(batchRows[0]);
+  const sellBatch = inStock[0] ?? null;
   const batchId = typeof sellBatch?.id === "string" ? sellBatch.id : null;
   const costPerBase =
     typeof sellBatch?.costPerBase === "number" ? sellBatch.costPerBase : null;
@@ -200,7 +200,10 @@ async function main(): Promise<void> {
   if (batchId && costPerBase != null) {
     pass("4b. In-stock batch + cost", `cost=${costPerBase}`);
   } else {
-    fail("4b. In-stock batch + cost", JSON.stringify(batches.body));
+    fail(
+      "4b. In-stock batch + cost",
+      `inStock=${inStock.length} totalReturned=${batchRows.length}`,
+    );
     return finish();
   }
 

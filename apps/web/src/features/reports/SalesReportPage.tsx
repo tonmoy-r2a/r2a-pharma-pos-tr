@@ -24,6 +24,7 @@ import {
   initialsFromName,
 } from "@/lib/format";
 import { useOwnerPath } from "@/lib/OwnerPathProvider";
+import { csvStamp, downloadCsv } from "@/lib/csvExport";
 import {
   fetchSalesReport,
   rangeForSalesReportPreset,
@@ -67,6 +68,31 @@ export function SalesReportPage() {
     };
   }, [preset, reload, storeId, t]);
 
+  const canExport = Boolean(data && data.recentTransactions.length > 0);
+
+  function exportCsv() {
+    if (!data || data.recentTransactions.length === 0) return;
+    const headers = [
+      t("reports.salesReport.table.invoice"),
+      t("reports.salesReport.table.date"),
+      t("reports.salesReport.table.customer"),
+      t("reports.salesReport.table.items"),
+      t("reports.salesReport.table.payment"),
+      t("reports.salesReport.table.total"),
+      t("reports.salesReport.table.cashier"),
+    ];
+    const rows = data.recentTransactions.map((sale) => [
+      sale.invoiceNo ?? sale.saleId,
+      formatSalesDateTime(sale.date),
+      sale.customerName ?? t("reports.salesReport.walkIn"),
+      String(sale.itemCount),
+      formatPaymentMethods(sale.paymentMethods, t),
+      String(sale.total),
+      sale.cashierName,
+    ]);
+    downloadCsv(`sales-report-${csvStamp()}.csv`, [headers, ...rows]);
+  }
+
   return (
     <div className="w-full px-5 py-4">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
@@ -106,10 +132,14 @@ export function SalesReportPage() {
           </label>
           <button
             type="button"
-            disabled
-            aria-disabled="true"
-            title={t("reports.salesReport.exportHint")}
-            className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg bg-slate-200 px-3 py-2 text-sm font-semibold text-muted"
+            disabled={!canExport}
+            title={
+              canExport
+                ? t("reports.salesReport.exportHint")
+                : t("reports.salesReport.exportEmpty")
+            }
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-muted"
+            onClick={exportCsv}
           >
             <Download className="size-4" strokeWidth={1.75} />
             {t("reports.salesReport.export")}

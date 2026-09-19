@@ -2,8 +2,8 @@
  * M6 Batch B smoke — Owner chrome lock.
  * Run: npm run smoke:m6b -w @r2a/web
  *
- * Source guards only (no live API). Sidebar IA, disabled unauthorized nav,
- * store control display-only. Mock KPI totals stay forbidden.
+ * Source guards only (no live API). Sidebar IA, live Help + Owner Profile
+ * (Slice 8), store control display-only. Mock KPI totals stay forbidden.
  */
 
 import { readFileSync, readdirSync } from "node:fs";
@@ -97,9 +97,13 @@ function checkSidebar(): void {
     "Sidebar IA must include later nav items",
   );
   assert(
-    /id:\s*"help"[\s\S]*?live:\s*false/.test(nav) &&
-      /id:\s*"ownerProfile"[\s\S]*?live:\s*false/.test(nav),
-    "Help and Owner Profile must be disabled",
+    /id:\s*"help"[\s\S]*?live:\s*true/.test(nav) &&
+      /id:\s*"ownerProfile"[\s\S]*?live:\s*true/.test(nav),
+    "Help and Owner Profile must be live (Slice 8)",
+  );
+  assert(
+    nav.includes('path: "/help"') && nav.includes('path: "/settings/account"'),
+    "Help + Owner Profile must declare footer paths",
   );
 
   assert(
@@ -122,7 +126,7 @@ function checkSidebar(): void {
     "Core Slice 1 paths must remain live",
   );
 
-  console.log("  ✓ sidebar IA + disabled unauthorized later items");
+  console.log("  ✓ sidebar IA + live Help/Owner Profile footer");
 }
 
 function checkStoreControl(): void {

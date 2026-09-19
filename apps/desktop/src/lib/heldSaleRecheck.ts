@@ -18,7 +18,8 @@
  * Same-batch lines allocate in snapshot order (no hard reservation).
  * FEFO override metadata is kept on surviving lines.
  *
- * TODO(cloud): no hold/reserve API in this slice.
+ * Prod P12 cloud holds remain soft. TODO(cloud): hard reservation / inventory
+ * lock remains out of scope (no hold/reserve stock API).
  */
 
 import type { CartLine } from "@/features/pos/cartTypes";

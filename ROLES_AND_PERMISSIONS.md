@@ -3,7 +3,7 @@
 **Document type:** Canonical RBAC spec for the whole system (POS + future Owner/Manager surfaces)  
 **Product:** PharmaSync POS — Multi-Tenant Pharmacy POS & Inventory SaaS  
 **Version:** 2.0.0  
-**Last updated:** 2026-08-21
+**Last updated:** 2026-09-18
 **Audience:** Engineering, product, Cursor agents
 
 ---
@@ -54,7 +54,7 @@ Prisma / JWT roles (locked): `SUPER_ADMIN` \| `OWNER` \| `MANAGER` \| `CASHIER`.
 ### Pharmacy Owner
 
 * **Access:** Root authority for one tenant.
-* **Live UI:** Owner web (`apps/web`) — **M6 Slice 1 A–O DONE** + **Slice 2 P–AB DONE** + **Slice 3 AE–AM DONE** + **Slice 4 Staff AN–AV DONE** + **Slice 5 Shift Details and variance review through BB DONE** + Slice 6 Sales Report DONE + Slice 7 Audit & FEFO dashboard DONE. Manager/Cashier rejected on web. Audit Detail remains gated for BK.
+* **Live UI:** Owner web (`apps/web`) — **M6 Slice 1 A–O DONE** + **Slice 2 P–AD DONE** + **Slice 3 AE–AM DONE** + **Slice 4 Staff AN–AV DONE** + **Slice 5 Shift Details and variance review through BB DONE** + **Slice 6 Sales Report DONE** + **Slice 7 Audit & FEFO DONE** + **Slice 8 Settings + Help + Owner Profile DONE** (BM–BQ). Manager/Cashier rejected on web.
 * **Until web exists:** Owner may log into desktop POS (`apps/desktop`) with the same JWT role. Desktop remains a **cashier workstation**, not the executive suite.
 * **Scope:** Financials and margins, staff, catalog/pricing, settings, audit, n8n (M6), multi-branch (M7).
 
@@ -80,23 +80,25 @@ Prisma / JWT roles (locked): `SUPER_ADMIN` \| `OWNER` \| `MANAGER` \| `CASHIER`.
 ## 2. Now vs later (so M5+ does not invent ahead)
 
 | Capability | Now (M0–M4) | When to build |
+| Capability | Now (M0–M4) | When to build |
 |------------|-------------|---------------|
 | Cashier POS checkout (Cash / Card stub / MFS invent) | **Live** | — |
 | Margin redaction (`costPerBase` omitted for cashier) | **Live** | — |
 | `POST /users` — Owner or Manager creates Cashier/Manager | **Live** | — |
 | `POST /customers` — **Owner Active; Cashier/Manager POS = Pending** | **Live (M6 AF).** Owner Active; Cashier/Manager POS Pending, extras stripped | Owner web UI + POS Create + Owner approve = **M6 Slice 3 AF–AM** |
 | FEFO override on POS | **Stub PIN** (any 4-digit + local “Authorized By”). **M6 D:** ingest persists `fefoOverride` + authorizer name. | Real `pinHash` when **authorized** |
-| Shift open/close | **Cloud shift live through M6 BB** — desktop open/close uses opening float + counted cash; Owner web Shift Management + Shift Details + Review Cash Variance live | Reports Dashboard = **M6 Batch BC DONE** (`/reports` live, composes existing OWNER APIs); Sales Report UI = **M6 Batch BF DONE** (`/reports/sales`). Inventory/Purchase detail reports stay disabled. |
-| Purchase / GRN / stock entry UI | Add lot + signed adjustment live; **M6 R Supplier/PO/GRN/return APIs live (OWNER-only); M6 T–U Purchasing list + Create PO web UI live** | PO Details, Receive against PO, Suppliers screens, return workflow in later Slice 2 batches |
+| Shift open/close | **Cloud shift live through M6 BB** — desktop open/close uses opening float + counted cash; Owner web Shift Management + Shift Details + Review Cash Variance live | Reports Dashboard = **M6 Batch BC DONE** (`/reports` live, composes existing OWNER APIs); Sales Report UI = **M6 Batch BF DONE** (`/reports/sales`). |
+| Purchase / GRN / stock entry UI | Add lot + signed adjustment live; **M6 Slice 2 DONE** — OWNER-only Supplier/PO/GRN/return APIs + Purchasing/Suppliers/Expiry Returns/Manifest Details web UI; dual receive (Inventory ad-hoc + PO GRN); **Prod P2** Edit Supplier live | View All Receipts / reorder suggestions stay parked |
 | Owner web dashboard | **Live** (M6 G — KPIs, bars, inventory health, FEFO, recent sales) | Sales list = **live** (M6 H). Transaction Details = **live** (M6 I). Inventory list = **live** (M6 J). Product Details = **live** (M6 K) |
 | **Owner web Add Product** | **Live** (M6 L — `POST /products` with Piece→Strip→Box units, Rx, cold chain, reorder level, storage notes; 0 initial stock; redirect to Product Details) | Receive Stock is **live** (M6 M) |
-| **Owner web Expiry Management** | **Live** (M6 N — OWNER-only expiry API, supplier/return metadata, filters/selection/CSV; **M6 AA** Prepare Supplier Return → `/suppliers/returns`; **M6 AB** Create Return Manifest) | Manifest Details = Batch AC **deferred** |
+| **Owner web Expiry Management** | **Live** (M6 N — OWNER-only expiry API, supplier/return metadata, filters/selection/CSV; **M6 AA–AC** Prepare Return → Create Manifest → Manifest Details lifecycle) | — |
 | Loyalty earn/redeem persistence | **Live** on ingest snapshots (`loyaltyUsed` / `loyaltyEarned` + customer balance). POS session calc unchanged. OTP stub stays. | Owner web Transaction Details = **live** (M6 I) |
 | n8n, RLS, bi-di sync | Not started | **M6** |
-| Supplier return bucket, supplier ledger | Supplier profiles, PO, GRN, return queue, and manifest create APIs/UI live; Purchasing/Suppliers/Expiry Returns/Create Manifest web UI live | Manifest Details + dispatch lifecycle **deferred** (Slice 2 AC) |
+| Supplier return bucket, supplier ledger | Supplier profiles, PO, GRN, return queue, manifest create/dispatch/decision/complete APIs/UI live; Purchasing/Suppliers/Expiry Returns/Create Manifest/Details web UI live | Manager web still later / out of production track |
 | Owner web Customers | Nav + live directory + Add + Details + Registration Review + POS Create — **Slice 3 AE–AM DONE** | Edit Customer = later |
 | Owner web Staff | **Live (M6 Slice 4 AN–AV)** — list/add/details/edit + deactivate/reactivate | — |
-| Audit & FEFO | **APIs live (M6 BI)** and Owner web Audit & FEFO dashboard live at `/audit` (M6 BJ). StockAudit and FEFO violation records exist; Owner audit dashboard/list/detail/review/correct APIs live; Owner/Manager audit start/lines/submit APIs live; sale ingest records FEFO override violations. Audit Detail UI remains gated. | Owner web Audit detail/review = **BK** |
+| Audit & FEFO | **Live (M6 Slice 7 BH–BL DONE)** — APIs live (M6 BI), Owner web Audit & FEFO dashboard live at `/audit` (M6 BJ), and Owner web Audit Detail + Review Audit modal + Apply FEFO Correction live at `/audit/:auditId` (M6 BK) | Desktop stock count UI = later backlog |
+| Settings / Help / Owner Profile | **Live (M6 Slice 8 BM–BQ DONE)** — Settings hub + Business Profile + Account Profile + Help; OWNER-only settings/help APIs | Branch/Roles/Preferences/Security/Audit&Data cards + Help tickets stay disabled |
 | Super Admin console, multi-branch, transfers | Not started | **M7** |
 | Sale void / delete | **Forbidden** (append-only) | Only if the user **re-authorizes** |
 | On-account / customer due tender | **Forbidden** | Never |
@@ -127,6 +129,9 @@ Legend: ✅ allowed · ❌ denied · ⚠️ cashier may **request**; Owner/Manag
 | Search customer / loyalty at POS | ❌ | ✅ | ✅ | ✅ |
 | POS checkout & settled billing | ❌ | ✅ | ✅ | ✅ |
 | FEFO override (non-default batch) | ❌ | ✅ authorize | ✅ authorize | ⚠️ request only |
+| Start / submit stock audit count (API) | ❌ | ✅ | ✅ | ❌ |
+| Review / complete stock audit | ❌ | ✅ | ❌ | ❌ |
+| Apply FEFO violation correction | ❌ | ✅ | ❌ | ❌ |
 | Supplier expiry returns | ❌ | ✅ *(M6)* | ✅ *(M6)* | ❌ |
 | n8n automation settings | ❌ | ✅ *(M6)* | ❌ | ❌ |
 | Multi-branch / stock transfer | ❌ | ✅ *(M7)* | ⚠️ *(M7)* | ❌ |
@@ -157,6 +162,10 @@ Matches `Completed_API_lists.md`. JWT claims: `{ sub, role, tenantId, storeId }`
 | `GET /api/v1/owner/audit/dashboard`, `GET /owner/audits`, `GET /owner/audits/:id` | **`OWNER` only** (`403` for Manager and Cashier) — audit dashboard/list/detail APIs (M6 BI) |
 | `POST /api/v1/owner/audits/:id/review`, `POST /owner/fefo-violations/:id/correct` | **`OWNER` only** — review submitted/variance audits and mark OPEN FEFO violations corrected (M6 BI) |
 | `POST /api/v1/audits/start`, `POST /audits/:id/lines`, `POST /audits/:id/submit` | `OWNER`, `MANAGER` — API-only stock count lifecycle; Cashier 403; desktop count UI deferred (M6 BI) |
+| `GET`/`PATCH /api/v1/owner/settings/business` | **`OWNER` only** — business/store profile (M6 BM); Owner web UI live (M6 BN) |
+| `GET`/`PATCH /api/v1/owner/settings/account`, `POST /owner/settings/account/change-password` | **`OWNER` only** — account profile + password (M6 BM); Owner web UI live (M6 BO) |
+| `GET /api/v1/owner/settings/activity` | **`OWNER` only** — configuration activity feed (M6 BM) |
+| `GET /api/v1/owner/help/status` | **`OWNER` only** — Help system status (M6 BM); Owner web UI live (M6 BP) |
 | `GET /api/v1/owner/inventory` | **`OWNER` only** (`403` for Manager and Cashier) |
 | `GET /api/v1/owner/products/:id` | **`OWNER` only** — full product detail + batches + FEFO rank + InventoryEvent (M6K) |
 | `GET /api/v1/owner/batches/:id` | **`OWNER` only** — management context + revisions/adjustments |
@@ -186,7 +195,7 @@ Matches `Completed_API_lists.md`. JWT claims: `{ sub, role, tenantId, storeId }`
 * **Fields:** `name`, **required `phone`**, optional `email`, `dateOfBirth`, `gender`, `address`. Do **not** surface `creditBalance`.
 * **Cashier at checkout:** search **Active** customers only (`GET /customers`); apply loyalty if eligible; if not found → **Walk-in** or POS Create (pending).
 * **`loyaltyPoints`:** display/redeem at POS (session settlement). Authoritative persist = **M6 Batch D** ingest snapshots when `loyaltyUsed`/`loyaltyEarned` are sent with an **Active** `customerId`.
-* **Edit Customer** stays parked in Slice 3. `PATCH /customers/:id` remains Owner/Manager API-only.
+* **Edit Customer** — Owner web live (Prod P1) at `/customers/:id/edit` via `PATCH /customers/:id` (ACTIVE↔INACTIVE + profile fields). Pending stays approve/reject only.
 * **`creditBalance`:** unused schema leftover. Do **not** expose in UI, mutate via POS, or build features on it.
 
 ---
@@ -272,15 +281,28 @@ Field names stay Prisma-locked: `expiryDate`, not `expirationDate` / `expiration
 
 ## 10. Shift close
 
-**Today:** local `shiftStore` (tenant+store). Soft gate: New Sale requires an open shift. No cash count. No cloud shift API.
+**Live (cloud):** Desktop `shiftStore` → `POST /shifts`, `POST /shifts/active/close`, `GET /shifts/active`. Soft gate: New Sale requires an open shift. Close enters **physical counted cash**; variance = counted − (opening float + cash sales); non-zero → `FLAGGED` for Owner review.
 
-**Target (when cloud shift is authorized):**
-
-1. Cashier Close Shift → enter **physical cash** in drawer.
-2. Hide system expected total (opening float + cash sales) until after submit.
-3. Log variance for Owner/Manager review.
+**Prod P10 — Request Cash Count:**
+- **OWNER only** may `POST /api/v1/owner/shifts/:shiftId/cash-count-request` (optional note) on an **OPEN** shift; optional cancel via `.../cash-count-request/cancel`.
+- Cashier/Manager desktop polls active shift; when `cashCountStatus=REQUESTED`, Counter Ready + Shift panel show a banner.
+- Cashier responds by entering counted cash on **Close Shift** (same path — no second cash ledger). Close marks the request `COMPLETED`.
+- No Manager web surface.
 
 Latin digits only in UI (e.g. ৳150).
+
+---
+
+## 10b. Terminal presence (Prod P11)
+
+**OWNER** reads `GET /api/v1/owner/terminals/presence` (Dashboard Terminals card).  
+**CASHIER / MANAGER / OWNER** desktop posts `POST /api/v1/terminals/heartbeat` while authenticated.  
+**Lock:** under Force Offline, desktop still heartbeats with `forceOffline: true` so Owner sees Forced Offline. Stop on logout. No Manager web surface.
+
+## 10c. Cloud held sales (Prod P12)
+
+**CASHIER / MANAGER / OWNER** desktop JWT may create/list/get/discard/resume-ack store-scoped soft holds via `/api/v1/held-sales`.  
+**Lock:** soft hold only — **no** stock reservation / inventory lock. Max 3 per store when online. Offline uses local `heldSaleStore`. Reconnect: cloud canonical; push local-only if not discarded. Mid-payment Hold still aborts card/MFS stubs.
 
 ---
 
@@ -367,3 +389,19 @@ Do **not** implement:
 | 2026-08-22 | **M6 Batch BH** — StockAudit + FEFO violation schema/Zod/seed complete only. No audit routes or Owner web Audit UI until BI–BK authorization. |
 | 2026-08-22 | **M6 Batch BI** — Audit + FEFO APIs live. Owner-only audit dashboard/list/detail/review/correct; Owner/Manager audit start/lines/submit; sale ingest writes OPEN FEFO violation records on override. No Owner web Audit UI until BJ–BK. |
 | 2026-08-22 | **M6 Batch BJ** — Owner web Audit & FEFO dashboard live at `/audit`; consumes existing audit dashboard/list plus expiry APIs; Audit Detail remains Batch BK. |
+| 2026-09-10 | **M6 Batch BK** — Owner web Audit Detail live at `/audit/:auditId` (lines, timeline, notes, linked FEFO violation); Review Audit modal posts live audit review; Apply FEFO Correction modal posts live correction; `smoke:m6bk` PASS. |
+| 2026-09-18 | **Prod Batch P15 / Wave 4 DONE** — OWNER GRN receipt-draft GET/PUT/DELETE; receive Save as Draft live; Supplier/Manifest drafts stay disabled with honest hints; `smoke:prod-p15` PASS. Next = `Authorize Prod Batch S1`. |
+| 2026-09-18 | **Prod Batch P14 DONE** — OWNER Catalog Import (`POST /owner/catalog/import/dry-run` + `/commit`); Inventory `/inventory/import`; sku upsert + units; no cashier cost columns; `smoke:prod-p14` PASS. Next = `Authorize Prod Batch P15`. |
+| 2026-09-18 | **Prod Batch P13 DONE** — Desktop Transactions → existing `GET /sales` (+ `/:id`); cashier store-scoped when JWT has storeId; offline local merge; Owner web Sales unchanged; `smoke:prod-p13` PASS. Next = `Authorize Prod Batch P14`. |
+| 2026-09-18 | **Prod Batch P12 DONE** — Soft cloud held sales (`/held-sales`); cashier JWT store-scoped; no stock reservation; max 3; `smoke:prod-p12` PASS. Next = `Authorize Prod Batch P13`. |
+| 2026-09-18 | **Prod Batch P11 DONE** — Desktop heartbeat + OWNER presence list; Dashboard Terminals dots; Force Offline continues heartbeat with `forceOffline: true`; no Manager web; `smoke:prod-p11` PASS. Next was `Authorize Prod Batch P12`. |
+| 2026-09-18 | **Prod Batch P10 DONE** — OWNER requests cash count on OPEN shifts; cashier responds on desktop via close-shift counted cash; `smoke:prod-p10` PASS. Next = `Authorize Prod Batch P11`. |
+| 2026-09-18 | **Prod Batch P9 / Wave 3 DONE** — Owner web Review All Issues `/suppliers/issues` from suppliers attention; no new API; `smoke:prod-p9` PASS. Next = `Authorize Prod Batch P10`. |
+| 2026-09-18 | **Prod Batch P8 DONE** — Desktop Settings → Stock Audit (OWNER/MANAGER); online start/lines/submit; Owner web `/audit` review unchanged; `smoke:prod-p8` PASS. Next was `Authorize Prod Batch P9`. |
+| 2026-09-18 | **Prod Batch P7 DONE** — Owner web client CSV export on Sales/Inventory/Purchase reports, Audit list+lines, Shift detail, Expiry Returns; Print disabled pending S2; no new API; `smoke:prod-p7` PASS. Next was `Authorize Prod Batch P8`. |
+| 2026-09-18 | **Prod Batch P2 DONE** — Owner web Edit Supplier `/suppliers/:id/edit`; `PATCH /owner/suppliers/:id` ACTIVE↔HOLD (+ DRAFT if already); `smoke:prod-p2` PASS. Next = `Authorize Prod Batch P3`. |
+| 2026-09-18 | **Prod Batch P1 DONE** — Owner web Edit Customer `/customers/:id/edit`; `PATCH /customers/:id` additively accepts DOB/gender/address + ACTIVE↔INACTIVE; pending/rejected blocked; `smoke:prod-p1` PASS. Next was `Authorize Prod Batch P2`. |
+| 2026-09-18 | **M6 Batch AD / Slice 2 DONE** — catalog §22 + `smoke:m6s2` PASS; Slice 2 complete; Manager web still later; next was `Authorize Prod Batch P1`. |
+| 2026-09-18 | **M6 Batch AC DONE** — Owner web Manifest Details + Dispatch/Decision/Complete; `smoke:m6ac` PASS; next was `Authorize M6 Batch AD`. |
+| 2026-09-18 | **M6 Batch BQ / Slice 8 DONE** — Settings + Help catalog §28; composed `smoke:m6s8` PASS; Slice 8 complete; AC–AD were Prod Wave 2. |
+| 2026-09-10 | **M6 Batch BL / Slice 7 DONE** — Audit & FEFO catalog §27 added; composed `smoke:m6s7` PASS; Slice 7 complete; Slice 8 Settings gated. |

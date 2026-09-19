@@ -10,7 +10,9 @@ import {
   Plus,
   Search,
   SlidersHorizontal,
+  Upload,
   Wallet,
+  X,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useLocale, type MessageKey } from "@/i18n";
@@ -22,6 +24,12 @@ import {
   formatTaka,
 } from "@/lib/format";
 import {
+  buildInventoryPath,
+  readSupplierIdFromUrl,
+  readTabFromUrl,
+  writeInventoryUrl,
+} from "@/lib/inventoryUrl";
+import {
   fetchOwnerInventory,
   type InventoryRowStatus,
   type InventoryTab,
@@ -29,6 +37,7 @@ import {
   type OwnerInventoryRow,
 } from "@/lib/ownerInventory";
 import { useOwnerPath } from "@/lib/OwnerPathProvider";
+import { fetchSupplierDetail } from "@/lib/suppliers";
 import { ReceiveProductPicker } from "./ReceiveProductPicker";
 
 const PAGE_SIZE = 25;
@@ -56,17 +65,26 @@ const STATUS_LABEL: Record<InventoryRowStatus, MessageKey> = {
 
 /**
  * Inventory list (Batch J). Content region only — chrome is Batch B.
- * Live GET /owner/inventory. Product Details is Batch K; Add / Receive / Expiry later.
+ * Live GET /owner/inventory. Prod P4: optional `?supplierId=` deep-link from
+ * Supplier Details (products linked via ACTIVE batches and/or PO lines).
+ * Enhance D1: `?tab=` sync (validated) without dropping `supplierId`.
  */
 export function InventoryPage() {
   const { t } = useLocale();
   const { navigate } = useOwnerPath();
 
-  const [tab, setTab] = useState<InventoryTab>("all");
+  const [tab, setTab] = useState<InventoryTab>(() => readTabFromUrl());
   const [searchInput, setSearchInput] = useState("");
   const [searchQ, setSearchQ] = useState("");
+  const [supplierId, setSupplierId] = useState(readSupplierIdFromUrl);
+  const [supplierName, setSupplierName] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  function selectTab(next: InventoryTab) {
+    setTab(next);
+    writeInventoryUrl({ tab: next, supplierId });
+  }
 
   const [payload, setPayload] = useState<OwnerInventoryPayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,7 +101,25 @@ export function InventoryPage() {
 
   useEffect(() => {
     setPage(0);
-  }, [tab]);
+  }, [tab, supplierId]);
+
+  useEffect(() => {
+    if (!supplierId) {
+      setSupplierName(null);
+      return;
+    }
+    let cancelled = false;
+    void fetchSupplierDetail(supplierId)
+      .then((supplier) => {
+        if (!cancelled) setSupplierName(supplier.name);
+      })
+      .catch(() => {
+        if (!cancelled) setSupplierName(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [supplierId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,6 +128,7 @@ export function InventoryPage() {
     void fetchOwnerInventory({
       q: searchQ || undefined,
       tab,
+      supplierId: supplierId || undefined,
       limit: PAGE_SIZE,
       offset: page * PAGE_SIZE,
     })
@@ -110,7 +147,14 @@ export function InventoryPage() {
     return () => {
       cancelled = true;
     };
-  }, [searchQ, tab, page, reload, t]);
+  }, [searchQ, tab, supplierId, page, reload, t]);
+
+  function clearSupplierFilter() {
+    setSupplierId("");
+    setSupplierName(null);
+    setPage(0);
+    navigate(buildInventoryPath({ tab }));
+  }
 
   const summary = payload?.summary;
   const tabs = payload?.tabs;
@@ -120,6 +164,9 @@ export function InventoryPage() {
   const fromIdx = total === 0 ? 0 : page * PAGE_SIZE + 1;
   const toIdx = Math.min(total, (page + 1) * PAGE_SIZE);
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const emptyMessage = supplierId
+    ? t("inventory.emptySupplier")
+    : t("inventory.empty");
 
   return (
     <div className="w-full px-5 py-4">
@@ -138,6 +185,14 @@ export function InventoryPage() {
           >
             <CalendarClock className="size-3.5 text-amber-600" strokeWidth={1.75} />
             {t("inventory.expiryManagement")}
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-canvas"
+            onClick={() => navigate("/inventory/import")}
+          >
+            <Upload className="size-3.5" strokeWidth={1.75} />
+            {t("inventory.importCatalog")}
           </button>
           <button
             type="button"
@@ -229,7 +284,7 @@ export function InventoryPage() {
                       ? "rounded-full bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
                       : "rounded-full border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-canvas"
                   }
-                  onClick={() => setTab(item.id)}
+                  onClick={() => selectTab(item.id)}
                 >
                   {t(item.label)} ({formatCount(count)})
                 </button>
@@ -254,6 +309,23 @@ export function InventoryPage() {
                     className="w-full rounded-md border border-border bg-surface py-1.5 pl-8 pr-3 text-sm text-foreground placeholder:text-muted"
                   />
                 </label>
+                {supplierId ? (
+                  <div className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-2.5 py-1 text-xs font-medium text-foreground">
+                    <span className="truncate">
+                      {t("inventory.filter.supplier")}:{" "}
+                      {supplierName ?? t("inventory.filter.supplierLoading")}
+                    </span>
+                    <button
+                      type="button"
+                      className="inline-flex shrink-0 items-center rounded p-0.5 text-muted hover:bg-canvas hover:text-foreground"
+                      onClick={clearSupplierFilter}
+                      aria-label={t("inventory.filter.clearSupplier")}
+                      title={t("inventory.filter.clearSupplier")}
+                    >
+                      <X className="size-3.5" strokeWidth={1.75} />
+                    </button>
+                  </div>
+                ) : null}
                 <button
                   type="button"
                   disabled
@@ -281,7 +353,7 @@ export function InventoryPage() {
                   {t("inventory.loading")}
                 </p>
               ) : rows.length === 0 ? (
-                <p className="px-4 py-6 text-sm text-muted">{t("inventory.empty")}</p>
+                <p className="px-4 py-6 text-sm text-muted">{emptyMessage}</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[56rem] text-left text-sm">

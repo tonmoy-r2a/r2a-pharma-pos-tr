@@ -192,7 +192,8 @@ function checkCreatePage(): void {
   assert(
     !/purchase-orders\/[^/]+\/receipts/.test(page) &&
       !/\/owner\/batches/.test(page) &&
-      !/receipts/.test(poLib),
+      !page.includes("createGoodsReceipt") &&
+      !page.includes("/receipts"),
     "Create PO must not write stock (no GRN or batch mutation)",
   );
   assert(

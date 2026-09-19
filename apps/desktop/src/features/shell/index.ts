@@ -14,6 +14,7 @@ export { Footer } from "./Footer";
 export type { FooterProps, FooterStatus } from "./Footer";
 export { Header } from "./Header";
 export { LocalDbProvider, useLocalDb } from "./LocalDbProvider";
+export { useTerminalPresenceHeartbeat } from "./useTerminalPresenceHeartbeat";
 export { Sidebar } from "./Sidebar";
 export type { PosToastTone } from "./PosToast";
 export { PosToast } from "./PosToast";

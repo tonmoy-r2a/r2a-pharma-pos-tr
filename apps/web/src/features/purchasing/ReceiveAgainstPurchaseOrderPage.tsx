@@ -11,7 +11,9 @@ import { fetchOwnerInventory } from "@/lib/ownerInventory";
 import { useOwnerPath } from "@/lib/OwnerPathProvider";
 import {
   confirmGoodsReceipt,
+  fetchGoodsReceiptDraft,
   fetchPurchaseOrder,
+  saveGoodsReceiptDraft,
   type PurchaseOrderDetail,
   type PurchaseOrderStatus,
 } from "@/lib/purchaseOrders";
@@ -95,6 +97,38 @@ function buildDraftLines(po: PurchaseOrderDetail): ReceiveLine[] {
   });
 }
 
+function applySavedLots(
+  base: ReceiveLine[],
+  saved: Array<{
+    lineId: string;
+    lots: Array<{
+      key: string;
+      batchNumber: string;
+      expiryDate: string;
+      qty: string;
+      costPerBase: string;
+      sellPerBase: string;
+    }>;
+  }>,
+): ReceiveLine[] {
+  const byId = new Map(saved.map((l) => [l.lineId, l.lots]));
+  return base.map((line) => {
+    const lots = byId.get(line.lineId);
+    if (!lots || lots.length === 0) return line;
+    return {
+      ...line,
+      lots: lots.map((lot) => ({
+        key: lot.key || newLotKey(),
+        batchNumber: lot.batchNumber ?? "",
+        expiryDate: lot.expiryDate ?? "",
+        qty: lot.qty ?? "",
+        costPerBase: lot.costPerBase ?? "",
+        sellPerBase: lot.sellPerBase ?? "",
+      })),
+    };
+  });
+}
+
 /**
  * Receive Stock against a Purchase Order (Batch W, Screen 12).
  * Form layout matched to restored specification design:
@@ -123,22 +157,46 @@ export function ReceiveAgainstPurchaseOrderPage({ poId }: { poId: string }) {
   const [invoiceRef, setInvoiceRef] = useState("");
   const [deliveryNote, setDeliveryNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const [draftBanner, setDraftBanner] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    void fetchPurchaseOrder(poId)
-      .then((payload) => {
+    setDraftLoaded(false);
+    setDraftBanner(null);
+    void Promise.all([
+      fetchPurchaseOrder(poId),
+      fetchGoodsReceiptDraft(poId).catch(() => null),
+    ])
+      .then(([payload, draft]) => {
         if (cancelled) return;
         setPurchaseOrder(payload);
+        const base = buildDraftLines(payload);
+        if (draft?.payload) {
+          const p = draft.payload;
+          setInvoiceRef(p.supplierInvoiceRef ?? "");
+          setDeliveryNote(p.deliveryNote ?? "");
+          if (p.receivedDate?.trim()) setReceivedDate(p.receivedDate.trim());
+          setDraftLines(applySavedLots(base, p.lines ?? []));
+          setDraftBanner(t("purchasing.receive.draftResumed"));
+        } else {
+          setInvoiceRef("");
+          setDeliveryNote("");
+          setReceivedDate(todayYmd());
+          setDraftLines(base);
+        }
+        setDraftLoaded(true);
         setLoading(false);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
         setPurchaseOrder(null);
         setLoading(false);
+        setDraftLoaded(true);
         if (err instanceof ApiError && err.statusCode === 404) {
           setError(t("purchasing.receive.notFound"));
         } else if (err instanceof ApiError) {
@@ -170,12 +228,6 @@ export function ReceiveAgainstPurchaseOrderPage({ poId }: { poId: string }) {
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    if (purchaseOrder) {
-      setDraftLines(buildDraftLines(purchaseOrder));
-    }
-  }, [purchaseOrder]);
 
   const summary = useMemo(() => {
     let lineItemsCount = 0;
@@ -289,6 +341,39 @@ export function ReceiveAgainstPurchaseOrderPage({ poId }: { poId: string }) {
     );
   }
 
+  async function handleSaveDraft() {
+    if (!purchaseOrder || savingDraft || submitting) return;
+    setSavingDraft(true);
+    setSubmitError(null);
+    try {
+      await saveGoodsReceiptDraft(purchaseOrder.id, {
+        supplierInvoiceRef: invoiceRef,
+        deliveryNote,
+        receivedDate,
+        lines: draftLines.map((line) => ({
+          lineId: line.lineId,
+          lots: line.lots.map((lot) => ({
+            key: lot.key,
+            batchNumber: lot.batchNumber,
+            expiryDate: lot.expiryDate,
+            qty: lot.qty,
+            costPerBase: lot.costPerBase,
+            sellPerBase: lot.sellPerBase,
+          })),
+        })),
+      });
+      setDraftBanner(t("purchasing.receive.draftSaved"));
+    } catch (err) {
+      setSubmitError(
+        err instanceof ApiError
+          ? err.message
+          : t("purchasing.receive.draftSaveError"),
+      );
+    } finally {
+      setSavingDraft(false);
+    }
+  }
+
   async function handleConfirm() {
     if (!purchaseOrder || !summary.hasValidLot || summary.hasOverReceive) return;
     setSubmitting(true);
@@ -321,7 +406,9 @@ export function ReceiveAgainstPurchaseOrderPage({ poId }: { poId: string }) {
     }
   }
 
-  const canSubmit = !submitting && summary.hasValidLot && !summary.hasOverReceive;
+  const canSubmit = !submitting && !savingDraft && summary.hasValidLot && !summary.hasOverReceive;
+  const canSaveDraft =
+    Boolean(purchaseOrder) && draftLoaded && !submitting && !savingDraft;
   const backToPo = () =>
     navigate(
       purchaseOrder
@@ -371,12 +458,14 @@ export function ReceiveAgainstPurchaseOrderPage({ poId }: { poId: string }) {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            disabled
-            aria-disabled="true"
-            title={t("purchasing.receive.saveDraftSoon")}
+            disabled={!canSaveDraft}
+            onClick={() => void handleSaveDraft()}
+            title={t("purchasing.receive.saveDraftHint")}
             className="rounded-md border border-slate-300/80 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {t("purchasing.receive.saveDraft")}
+            {savingDraft
+              ? t("purchasing.receive.savingDraft")
+              : t("purchasing.receive.saveDraft")}
           </button>
           <button
             type="button"
@@ -412,6 +501,18 @@ export function ReceiveAgainstPurchaseOrderPage({ poId }: { poId: string }) {
           >
             {t("purchasing.receive.back")}
           </button>
+        </div>
+      ) : null}
+
+      {purchaseOrder && draftBanner ? (
+        <div className="mt-3 rounded-lg border border-teal-200 bg-teal-50 px-4 py-2 text-sm text-teal-900">
+          {draftBanner}
+        </div>
+      ) : null}
+
+      {submitError ? (
+        <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">
+          {submitError}
         </div>
       ) : null}
 
@@ -852,12 +953,14 @@ export function ReceiveAgainstPurchaseOrderPage({ poId }: { poId: string }) {
             </button>
             <button
               type="button"
-              disabled
-              aria-disabled="true"
-              title={t("purchasing.receive.saveDraftSoon")}
+              disabled={!canSaveDraft}
+              onClick={() => void handleSaveDraft()}
+              title={t("purchasing.receive.saveDraftHint")}
               className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {t("purchasing.receive.saveDraft")}
+              {savingDraft
+                ? t("purchasing.receive.savingDraft")
+                : t("purchasing.receive.saveDraft")}
             </button>
             <button
               type="button"

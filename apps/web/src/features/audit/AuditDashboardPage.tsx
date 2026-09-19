@@ -2,7 +2,7 @@ import {
   AlertTriangle,
   ArrowRight,
   ClipboardCheck,
-  FileWarning,
+  Download,
   Filter,
   Hourglass,
   ListChecks,
@@ -21,6 +21,7 @@ import {
   type AuditSummary,
   type StockAuditStatus,
 } from "@/lib/audit";
+import { csvStamp, downloadCsv } from "@/lib/csvExport";
 import { daysUntilExpiry, fetchOwnerExpiry, type OwnerExpiryRow } from "@/lib/ownerExpiry";
 import { formatCount, formatDateTime, formatTaka, formatUtcDate } from "@/lib/format";
 import { useOwnerPath } from "@/lib/OwnerPathProvider";
@@ -85,6 +86,31 @@ export function AuditDashboardPage() {
     );
   }, [data, query]);
 
+  const canExport = visibleAudits.length > 0;
+
+  function exportCsv() {
+    if (visibleAudits.length === 0) return;
+    const headers = [
+      t("audit.recent.auditId"),
+      t("audit.recent.date"),
+      t("audit.recent.staff"),
+      t("audit.recent.location"),
+      t("audit.recent.items"),
+      t("audit.recent.variance"),
+      t("audit.recent.status"),
+    ];
+    const rows = visibleAudits.map((audit) => [
+      audit.auditNo,
+      formatDateTime(audit.startedAt),
+      audit.createdBy?.name ?? "",
+      audit.locationLabel,
+      String(audit.itemsChecked),
+      String(audit.varianceAmount),
+      t(STATUS_KEYS[audit.status]),
+    ]);
+    downloadCsv(`audit-list-${csvStamp()}.csv`, [headers, ...rows]);
+  }
+
   return (
     <div className="w-full px-5 py-4">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
@@ -99,12 +125,14 @@ export function AuditDashboardPage() {
         </div>
         <button
           type="button"
-          disabled
-          aria-disabled="true"
-          title={t("audit.generateHint")}
-          className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground opacity-70"
+          disabled={!canExport}
+          title={
+            canExport ? t("audit.generateHint") : t("audit.exportEmpty")
+          }
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70"
+          onClick={exportCsv}
         >
-          <FileWarning className="size-4" strokeWidth={1.75} />
+          <Download className="size-4" strokeWidth={1.75} />
           {t("audit.generateReport")}
         </button>
       </div>

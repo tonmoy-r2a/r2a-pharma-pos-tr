@@ -1,4 +1,9 @@
-/** M6 Batch S source smoke — Purchasing and Suppliers navigation shells. */
+/**
+ * M6 Batch S source smoke — Purchasing and Suppliers navigation live.
+ * Later slices enabled Customers/Staff/Reports/etc.; this smoke only guards
+ * Batch S intent (Purchasing + Suppliers live chrome). Placeholders for
+ * subroutes were filled by T–AC.
+ */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -46,39 +51,16 @@ function main(): void {
     assert(paths.includes(`"${path}"`), `${path} must be a live Owner path`);
   }
 
-  for (const id of [
-    "customers",
-    "staff",
-    "reports",
-    "auditFefo",
-    "settings",
-    "help",
-    "ownerProfile",
-  ]) {
-    const item = navItem(nav, id);
-    assert(item.includes("live: false"), `${id} must remain disabled`);
-    assert(!item.includes("path:"), `${id} must not have a route`);
-  }
-  assert(!paths.includes('"/customers"'), "Customers route must not exist");
-
   assert(
     shell.includes('path === "/purchasing"') &&
       shell.includes("PurchasingPage") &&
-      shell.includes("PurchasingPlaceholder") &&
       shell.includes('path === "/suppliers"') &&
       shell.includes("SuppliersPage") &&
-      shell.includes("SupplierPlaceholder") &&
       shell.includes("suppliersSubpath"),
-    "AppShell must render Purchasing + Suppliers live lists and placeholder subroutes",
+    "AppShell must route Purchasing and Suppliers",
   );
-  assert(!shell.includes("<table"), "AppShell must not inline list tables");
 
-  for (const key of [
-    "page.purchasingTitle",
-    "page.purchasingHint",
-    "page.suppliersTitle",
-    "page.suppliersHint",
-  ]) {
+  for (const key of ["page.purchasingTitle", "page.suppliersTitle"]) {
     assert(
       en.includes(`"${key}"`) && bn.includes(`"${key}"`),
       `${key} must exist in en and bn-BD`,
@@ -86,8 +68,7 @@ function main(): void {
   }
 
   console.log("  ✓ Purchasing and Suppliers nav are live");
-  console.log("  ✓ Purchasing list + placeholder subroutes; Suppliers shell only");
-  console.log("  ✓ Customers and remaining later nav stay disabled");
+  console.log("  ✓ AppShell routes Purchasing + Suppliers");
   console.log("\nPASS");
 }
 

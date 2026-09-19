@@ -9,8 +9,12 @@ import {
 import { Pause, X } from "lucide-react";
 import { ConfirmDialog } from "@/features/pos";
 import { useAuth } from "@/features/auth";
+import { useConnectivity } from "@/features/shell";
 import { useLocale } from "@/i18n";
 import { formatTaka } from "@/lib/format";
+import {
+  cloudListHeldSales,
+} from "@/lib/cloudHeldSales";
 import {
   formatHeldSaleAt,
   heldSaleStore,
@@ -23,6 +27,8 @@ export type HeldSalesPanelProps = {
   /** True when the active cart has ≥1 line — resume toasts instead of swapping. */
   cartHasItems: boolean;
   onResume: (snapshot: HeldSaleSnapshot) => void | Promise<void>;
+  /** Prod P12 — discard via cloud when online; falls back to local remove. */
+  onDiscard?: (snapshot: HeldSaleSnapshot) => void | Promise<void>;
   /** After discard so chrome Held n/3 can refresh. */
   onListChanged?: () => void;
 };
@@ -34,18 +40,21 @@ function snapshotTotal(snapshot: HeldSaleSnapshot): number {
 }
 
 /**
- * Held Sales list (M3 Batch AN invent + AO resume recheck).
+ * Held Sales list (M3 Batch AN + Prod P12 cloud).
  * Teal Napa chrome. Soft hold — stock is not reserved; resume rechecks qty/expiry.
+ * Online: store-shared cloud list. Offline: local heldSaleStore.
  * ↑/↓ rows · ←/→ Resume / Discard · Enter activate · Esc close · no Tab · no Baki.
  */
 export function HeldSalesPanel({
   onClose,
   cartHasItems,
   onResume,
+  onDiscard,
   onListChanged,
 }: HeldSalesPanelProps) {
   const { t } = useLocale();
   const { user } = useAuth();
+  const { isOnline } = useConnectivity();
   const titleId = useId();
   const listId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -56,17 +65,33 @@ export function HeldSalesPanel({
   const [pendingDiscard, setPendingDiscard] =
     useState<HeldSaleSnapshot | null>(null);
   const [resumeBusy, setResumeBusy] = useState(false);
+  const [discardBusy, setDiscardBusy] = useState(false);
+  const [listBusy, setListBusy] = useState(false);
 
-  const reload = useCallback(() => {
+  const reload = useCallback(async () => {
     if (!user?.tenantId) {
       setRows([]);
       return;
     }
+    if (isOnline && user.storeId) {
+      setListBusy(true);
+      try {
+        const cloud = await cloudListHeldSales();
+        heldSaleStore.replaceAll(user.tenantId, user.storeId, cloud);
+        setRows(cloud);
+        onListChanged?.();
+      } catch {
+        setRows(heldSaleStore.list(user.tenantId, user.storeId ?? null));
+      } finally {
+        setListBusy(false);
+      }
+      return;
+    }
     setRows(heldSaleStore.list(user.tenantId, user.storeId ?? null));
-  }, [user?.tenantId, user?.storeId]);
+  }, [user?.tenantId, user?.storeId, isOnline, onListChanged]);
 
   useEffect(() => {
-    reload();
+    void reload();
   }, [reload]);
 
   useEffect(() => {
@@ -99,17 +124,39 @@ export function HeldSalesPanel({
   }, []);
 
   const confirmDiscard = useCallback(() => {
-    if (!user?.tenantId || !pendingDiscard) return;
-    heldSaleStore.remove(
-      user.tenantId,
-      user.storeId ?? null,
-      pendingDiscard.id,
-    );
-    setPendingDiscard(null);
-    reload();
-    onListChanged?.();
-    queueMicrotask(() => panelRef.current?.focus());
-  }, [user?.tenantId, user?.storeId, pendingDiscard, reload, onListChanged]);
+    if (!user?.tenantId || !pendingDiscard || discardBusy) return;
+    const target = pendingDiscard;
+    setDiscardBusy(true);
+    void Promise.resolve(
+      onDiscard
+        ? onDiscard(target)
+        : Promise.resolve(
+            heldSaleStore.remove(
+              user.tenantId,
+              user.storeId ?? null,
+              target.id,
+            ),
+          ),
+    )
+      .then(() => {
+        setPendingDiscard(null);
+        return reload();
+      })
+      .catch(() => {
+        /* toast already shown by onDiscard */
+      })
+      .finally(() => {
+        setDiscardBusy(false);
+        queueMicrotask(() => panelRef.current?.focus());
+      });
+  }, [
+    user?.tenantId,
+    user?.storeId,
+    pendingDiscard,
+    discardBusy,
+    onDiscard,
+    reload,
+  ]);
 
   const runResume = useCallback(
     (snapshot: HeldSaleSnapshot) => {
@@ -150,7 +197,7 @@ export function HeldSalesPanel({
       return;
     }
 
-    if (resumeBusy) {
+    if (resumeBusy || discardBusy || listBusy) {
       return;
     }
 
@@ -192,7 +239,7 @@ export function HeldSalesPanel({
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
-      aria-busy={resumeBusy}
+      aria-busy={resumeBusy || discardBusy || listBusy}
       tabIndex={-1}
       onKeyDownCapture={onKeyDownCapture}
     >
@@ -211,7 +258,7 @@ export function HeldSalesPanel({
               {t("hold.title")}
             </h2>
             <p className="truncate text-xs text-muted">
-              {t("hold.subtitle")
+              {t(isOnline ? "hold.subtitleCloud" : "hold.subtitle")
                 .replaceAll("{count}", String(rows.length))
                 .replaceAll("{max}", String(MAX_HELD_SALES))}
             </p>
@@ -362,7 +409,9 @@ export function HeldSalesPanel({
       {pendingDiscard ? (
         <ConfirmDialog
           title={t("hold.discardTitle")}
-          description={t("hold.discardBody")}
+          description={t(
+            isOnline ? "hold.discardBodyCloud" : "hold.discardBody",
+          )}
           detailCard={{
             title: pendingDiscard.label,
             subtitle: pendingDiscard.customer?.name?.trim()

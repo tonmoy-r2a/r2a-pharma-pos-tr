@@ -2,6 +2,7 @@ import { DashboardPage } from "@/features/dashboard";
 import {
   AddProductPage,
   BatchManagementPage,
+  CatalogImportPage,
   EditProductPage,
   ExpiryManagementPage,
   InventoryPage,
@@ -18,19 +19,25 @@ import {
 import {
   AddSupplierPage,
   CreateReturnManifestPage,
+  EditSupplierPage,
   ExpiryReturnsPage,
+  ManifestDetailsPage,
   SupplierDetailsPage,
+  SupplierIssuesPage,
   SuppliersPage,
 } from "@/features/suppliers";
 import {
   AddCustomerPage,
   CustomerDetailsPage,
   CustomersPage,
+  EditCustomerPage,
   RegistrationReviewPage,
 } from "@/features/customers";
 import { AddStaffPage, EditStaffPage, ShiftDetailPage, ShiftManagementPage, StaffPage, StaffDetailPage } from "@/features/staff";
-import { ReportsDashboardPage, SalesReportPage } from "@/features/reports";
-import { AuditDashboardPage } from "@/features/audit";
+import { ReportsDashboardPage, SalesReportPage, InventoryReportPage, PurchaseReportPage, ProductMovementPage } from "@/features/reports";
+import { AuditDashboardPage, AuditDetailPage } from "@/features/audit";
+import { BusinessProfilePage, AccountProfilePage, SettingsHubPage } from "@/features/settings";
+import { HelpPage } from "@/features/help";
 import { useLocale } from "@/i18n";
 import {
   auditSubpath,
@@ -39,6 +46,7 @@ import {
   purchasingSubpath,
   reportsSubpath,
   salesDetailIdFromPath,
+  settingsSubpath,
   staffSubpath,
   suppliersSubpath,
 } from "@/lib/ownerPath";
@@ -58,43 +66,42 @@ function ShellMain() {
     const sub = inventorySubpath(pathname);
     if (sub.kind === "list") return <InventoryPage />;
     if (sub.kind === "expiry") return <ExpiryManagementPage />;
-    if (sub.kind === "detail") {
-      return <ProductDetailPage productId={sub.productId} />;
-    }
-    if (sub.kind === "new") {
-      return <AddProductPage />;
-    }
+    if (sub.kind === "new") return <AddProductPage />;
+    if (sub.kind === "import") return <CatalogImportPage />;
     if (sub.kind === "edit") {
-      return <EditProductPage productId={sub.productId} />;
+      return <EditProductPage key={sub.productId} productId={sub.productId} />;
     }
     if (sub.kind === "receive") {
-      return <ReceiveStockPage productId={sub.productId} />;
+      return (
+        <ReceiveStockPage key={sub.productId} productId={sub.productId} />
+      );
     }
     if (sub.kind === "batch") {
       return (
         <BatchManagementPage
-          key={`${sub.productId}:${sub.batchId}`}
+          key={`${sub.productId}-${sub.batchId}`}
           productId={sub.productId}
           batchId={sub.batchId}
         />
       );
     }
-    return <InventoryPage />;
+    if (sub.kind === "detail") {
+      return (
+        <ProductDetailPage key={sub.productId} productId={sub.productId} />
+      );
+    }
   }
   if (path === "/purchasing") {
     const sub = purchasingSubpath(pathname);
     if (sub.kind === "list") return <PurchasingPage />;
     if (sub.kind === "new") return <CreatePurchaseOrderPage />;
-    if (sub.kind === "detail") {
-      return <PurchaseOrderDetailPage poId={sub.poId} />;
-    }
     if (sub.kind === "receive") {
       return (
-        <ReceiveAgainstPurchaseOrderPage
-          key={sub.poId}
-          poId={sub.poId}
-        />
+        <ReceiveAgainstPurchaseOrderPage key={sub.poId} poId={sub.poId} />
       );
+    }
+    if (sub.kind === "detail") {
+      return <PurchaseOrderDetailPage key={sub.poId} poId={sub.poId} />;
     }
     return <PurchasingPlaceholder />;
   }
@@ -102,20 +109,27 @@ function ShellMain() {
     const sub = suppliersSubpath(pathname);
     if (sub.kind === "list") return <SuppliersPage />;
     if (sub.kind === "new") return <AddSupplierPage />;
-    if (sub.kind === "detail") {
-      return <SupplierDetailsPage supplierId={sub.supplierId} />;
-    }
+    if (sub.kind === "issues") return <SupplierIssuesPage />;
     if (sub.kind === "returns") return <ExpiryReturnsPage />;
     if (sub.kind === "returnsNew") return <CreateReturnManifestPage />;
     if (sub.kind === "returnsManifest") {
       return (
-        <SupplierPlaceholder
-          titleKey="suppliers.placeholder.manifestTitle"
-          hintKey="suppliers.placeholder.manifest"
+        <ManifestDetailsPage
+          key={sub.manifestId}
+          manifestId={sub.manifestId}
         />
       );
     }
-    return <SuppliersPage />;
+    if (sub.kind === "edit") {
+      return (
+        <EditSupplierPage key={sub.supplierId} supplierId={sub.supplierId} />
+      );
+    }
+    if (sub.kind === "detail") {
+      return (
+        <SupplierDetailsPage key={sub.supplierId} supplierId={sub.supplierId} />
+      );
+    }
   }
   if (path === "/customers") {
     const sub = customersSubpath(pathname);
@@ -128,6 +142,9 @@ function ShellMain() {
           customerId={sub.customerId}
         />
       );
+    }
+    if (sub.kind === "edit") {
+      return <EditCustomerPage key={sub.customerId} customerId={sub.customerId} />;
     }
     if (sub.kind === "detail") {
       return <CustomerDetailsPage key={sub.customerId} customerId={sub.customerId} />;
@@ -157,52 +174,28 @@ function ShellMain() {
   if (path === "/reports") {
     const sub = reportsSubpath(pathname);
     if (sub.kind === "sales") return <SalesReportPage />;
+    if (sub.kind === "inventory") return <InventoryReportPage />;
+    if (sub.kind === "purchasing") return <PurchaseReportPage />;
+    if (sub.kind === "productMovement") return <ProductMovementPage />;
     return <ReportsDashboardPage />;
   }
   if (path === "/audit") {
     const sub = auditSubpath(pathname);
     if (sub.kind === "detail") {
-      return <AuditPlaceholder titleKey="audit.detail.placeholderTitle" hintKey="audit.detail.placeholderHint" />;
+      return <AuditDetailPage key={sub.auditId} auditId={sub.auditId} />;
     }
     return <AuditDashboardPage />;
   }
+  if (path === "/settings") {
+    const sub = settingsSubpath(pathname);
+    if (sub.kind === "business") return <BusinessProfilePage />;
+    if (sub.kind === "account") return <AccountProfilePage />;
+    return <SettingsHubPage />;
+  }
+  if (path === "/help") {
+    return <HelpPage />;
+  }
   return <DashboardPage />;
-}
-
-function AuditPlaceholder({
-  titleKey,
-  hintKey,
-}: {
-  titleKey: "audit.detail.placeholderTitle";
-  hintKey: "audit.detail.placeholderHint";
-}) {
-  const { t } = useLocale();
-  return (
-    <section className="mx-auto w-full max-w-7xl p-4 sm:p-6">
-      <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-        <h1 className="text-xl font-semibold text-foreground">{t(titleKey)}</h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted">{t(hintKey)}</p>
-      </div>
-    </section>
-  );
-}
-
-function SupplierPlaceholder({
-  titleKey,
-  hintKey,
-}: {
-  titleKey: "suppliers.placeholder.manifestTitle";
-  hintKey: "suppliers.placeholder.manifest";
-}) {
-  const { t } = useLocale();
-  return (
-    <section className="mx-auto w-full max-w-7xl p-4 sm:p-6">
-      <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-        <h1 className="text-xl font-semibold text-foreground">{t(titleKey)}</h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted">{t(hintKey)}</p>
-      </div>
-    </section>
-  );
 }
 
 function PurchasingPlaceholder() {
@@ -257,16 +250,23 @@ function StaffPlaceholder({
  * (/purchasing/:poId/receive). edit still renders a localized placeholder.
  * Batch X fills the Suppliers directory. Batch Y fills the Add Supplier form
  * (/suppliers/new). Batch Z fills the live Supplier Details page
- * (/suppliers/:supplierId). Batch AA fills the Expiry Returns queue at
+ * (/suppliers/:supplierId). Prod P2 fills Edit Supplier at /suppliers/:id/edit.
+ * Batch AA fills the Expiry Returns queue at
  * /suppliers/returns. Batch AB fills Create Return Manifest at
- * /suppliers/returns/new. /suppliers/returns/:manifestId stays a placeholder.
+ * /suppliers/returns/new. Batch AC fills Manifest Details at
+ * /suppliers/returns/:manifestId (Dispatch / Decision / Complete modals).
  * Batch AG enables Customers as a live chrome route (/customers,
  * /customers/new, /customers/:id, /customers/:id/review) with placeholder
  * shells; Batch AH fills the directory, Batch AI fills /customers/new
  * (Add Customer + create confirm), Batch AJ fills /customers/:id
  * (Customer Details; pending redirects to Review), Batch AK fills
  * /customers/:id/review (Registration Review + Approve/Reject). Batch BC
- * enables Reports at /reports; report detail pages stay parked.
+ * enables Reports at /reports; Purchase Report stays parked until P6. Batch BF
+ * fills /reports/sales; Prod P5 fills /reports/inventory; Prod P6 fills
+ * /reports/purchasing. Enhance D2 fills /reports/product-movement. Batch BJ fills /audit; Batch BK fills /audit/:auditId.
+ * Batch BN fills /settings hub and /settings/business Business Profile.
+ * Batch BO fills /settings/account Account Profile (footer Owner Profile).
+ * Batch BP fills /help Help & Support (footer Help).
  */
 export function AppShell() {
   const { t } = useLocale();

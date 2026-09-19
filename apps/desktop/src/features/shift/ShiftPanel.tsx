@@ -11,6 +11,7 @@ import { useAuth } from "@/features/auth";
 import { ConfirmDialog } from "@/features/pos";
 import { useLocale } from "@/i18n";
 import { useConnectivity } from "@/features/shell";
+import { ApiError } from "@/lib/api";
 import {
   formatShiftDuration,
   formatShiftOpenedAt,
@@ -59,17 +60,44 @@ export function ShiftPanel({ onClose, onShiftChanged }: ShiftPanelProps) {
     status: string;
   } | null>(null);
 
-  const reload = useCallback(() => {
+  const notifyChanged = useCallback(() => {
+    onShiftChanged?.();
+  }, [onShiftChanged]);
+
+  useEffect(() => {
     if (!user?.tenantId) {
       setShift(null);
       return;
     }
-    setShift(shiftStore.get(user.tenantId, user.storeId ?? null));
-  }, [user?.tenantId, user?.storeId]);
-
-  useEffect(() => {
-    reload();
-  }, [reload]);
+    const storeId = user.storeId ?? null;
+    setShift(shiftStore.get(user.tenantId, storeId));
+    if (!isOnline) return;
+    let cancelled = false;
+    void shiftStore
+      .fetchAndCache(
+        user.tenantId,
+        storeId,
+        cashierLabel || user.name || user.email || "Cashier",
+        user.id,
+      )
+      .then((next) => {
+        if (cancelled) return;
+        setShift(next);
+        notifyChanged();
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    user?.tenantId,
+    user?.storeId,
+    user?.id,
+    user?.name,
+    user?.email,
+    cashierLabel,
+    isOnline,
+    notifyChanged,
+  ]);
 
   useEffect(() => {
     if (confirmClose || confirmOpen) return;
@@ -87,9 +115,30 @@ export function ShiftPanel({ onClose, onShiftChanged }: ShiftPanelProps) {
     return () => window.clearInterval(id);
   }, [shift, confirmClose]);
 
-  const notifyChanged = useCallback(() => {
-    onShiftChanged?.();
-  }, [onShiftChanged]);
+  // Prod P10 — poll for Owner cash-count request while panel open + online.
+  useEffect(() => {
+    if (!user?.tenantId || !isOnline || !shift) return;
+    const storeId = user.storeId ?? null;
+    const name = cashierLabel || user.name || user.email || "Cashier";
+    const tick = () => {
+      void shiftStore
+        .refreshCashCountFlag(user.tenantId, storeId, name, user.id)
+        .then((next) => {
+          if (next) setShift(next);
+        });
+    };
+    const id = window.setInterval(tick, 20_000);
+    return () => window.clearInterval(id);
+  }, [
+    user?.tenantId,
+    user?.storeId,
+    user?.id,
+    user?.name,
+    user?.email,
+    cashierLabel,
+    isOnline,
+    shift?.shiftId,
+  ]);
 
   const onOpenShift = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -113,7 +162,11 @@ export function ShiftPanel({ onClose, onShiftChanged }: ShiftPanelProps) {
       notifyChanged();
     } catch (err: unknown) {
       const msg =
-        err instanceof Error ? err.message : t("shift.openFailed");
+        err instanceof ApiError && err.statusCode === 409
+          ? t("shift.alreadyOpen")
+          : err instanceof Error
+            ? err.message
+            : t("shift.openFailed");
       setError(msg);
     } finally {
       setLoading(false);
@@ -274,6 +327,15 @@ export function ShiftPanel({ onClose, onShiftChanged }: ShiftPanelProps) {
               <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-connected">
                 {t("shift.statusOpen")}
               </p>
+              {shift.cashCountRequested ? (
+                <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-left text-xs text-amber-900">
+                  <p className="font-semibold">{t("shift.cashCount.bannerTitle")}</p>
+                  <p className="mt-1">{t("shift.cashCount.bannerBody")}</p>
+                  {shift.cashCountNote ? (
+                    <p className="mt-1 text-amber-800">{shift.cashCountNote}</p>
+                  ) : null}
+                </div>
+              ) : null}
               <h3 className="mt-2 text-lg font-semibold text-foreground">
                 {t("shift.activeHeading")}
               </h3>

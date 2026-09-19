@@ -8,12 +8,20 @@ import {
   ownerDashboardQuerySchema,
   ownerExpiryQuerySchema,
   ownerInventoryQuerySchema,
+  ownerProductMovementQuerySchema,
+  ownerStockPriorityQuerySchema,
   ownerSalesReportQuerySchema,
   productIdParamSchema,
   staffListQuerySchema,
   ownerStaffCreateSchema,
   ownerStaffPatchSchema,
   staffDeactivateSchema,
+  ownerBusinessSettingsPatchSchema,
+  ownerAccountSettingsPatchSchema,
+  ownerChangePasswordSchema,
+  ownerSettingsActivityQuerySchema,
+  catalogImportUploadSchema,
+  catalogImportCommitSchema,
 } from "@r2a/shared-types";
 import { restrictTo } from "../../middlewares/protect";
 import { validate } from "../../middlewares/validate";
@@ -22,6 +30,7 @@ import * as customerController from "../customer/customer.controller";
 import purchasingRouter from "../purchasing/purchasing.router";
 import { ownerShiftRouter } from "../shift/shift.router";
 import { ownerAuditRouter } from "../audit/audit.router";
+import { ownerTerminalPresenceRouter } from "../terminal/terminal.router";
 
 /**
  * Owner aggregate reads — dashboard / inventory-summary / expiry / inventory list
@@ -44,6 +53,18 @@ ownerRouter.get(
   "/reports/sales",
   validate({ query: ownerSalesReportQuerySchema }),
   ownerController.salesReport,
+);
+
+ownerRouter.get(
+  "/reports/product-movement",
+  validate({ query: ownerProductMovementQuerySchema }),
+  ownerController.productMovementReport,
+);
+
+ownerRouter.get(
+  "/reports/stock-priority",
+  validate({ query: ownerStockPriorityQuerySchema }),
+  ownerController.stockPriorityReport,
 );
 
 ownerRouter.get("/inventory-summary", ownerController.inventorySummary);
@@ -116,6 +137,7 @@ ownerRouter.post(
   ownerController.createStaff,
 );
 
+
 ownerRouter.patch(
   "/users/:id",
   validate({ params: idParamSchema, body: ownerStaffPatchSchema }),
@@ -136,5 +158,47 @@ ownerRouter.post(
 
 /** Owner shift management — list, detail, resolve-variance. */
 ownerRouter.use("/shifts", ownerShiftRouter);
+
+/** Prod P11 — terminal presence for Dashboard dots. */
+ownerRouter.use("/terminals", ownerTerminalPresenceRouter);
+
+/** Owner settings & business profile management (M6 Slice 8). */
+ownerRouter.get("/settings/business", ownerController.getBusinessSettings);
+ownerRouter.patch(
+  "/settings/business",
+  validate({ body: ownerBusinessSettingsPatchSchema }),
+  ownerController.patchBusinessSettings,
+);
+ownerRouter.get("/settings/account", ownerController.getAccountSettings);
+ownerRouter.patch(
+  "/settings/account",
+  validate({ body: ownerAccountSettingsPatchSchema }),
+  ownerController.patchAccountSettings,
+);
+ownerRouter.post(
+  "/settings/account/change-password",
+  validate({ body: ownerChangePasswordSchema }),
+  ownerController.changePassword,
+);
+ownerRouter.get(
+  "/settings/activity",
+  validate({ query: ownerSettingsActivityQuerySchema }),
+  ownerController.getSettingsActivity,
+);
+
+/** Owner Help & Support status (M6 Slice 8). */
+ownerRouter.get("/help/status", ownerController.getHelpStatus);
+
+ownerRouter.post(
+  "/catalog/import/dry-run",
+  validate({ body: catalogImportUploadSchema }),
+  ownerController.catalogImportDryRun,
+);
+
+ownerRouter.post(
+  "/catalog/import/commit",
+  validate({ body: catalogImportCommitSchema }),
+  ownerController.catalogImportCommit,
+);
 
 export default ownerRouter;

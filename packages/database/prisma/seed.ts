@@ -15,6 +15,7 @@
 
 import {
   BatchReturnStatus,
+  ConfigurationActivityType,
   CustomerSource,
   CustomerStatus,
   FefoViolationStatus,
@@ -267,10 +268,35 @@ async function main() {
 
   const tenant = await prisma.tenant.upsert({
     where: { slug: TENANT_SLUG },
-    update: { name: "Demo Pharmacy", isActive: true },
+    update: {
+      name: "Demo Pharmacy",
+      legalName: "Demo Healthcare & Pharmacy Ltd.",
+      tradeLicenseNo: "TRAD/DSCC/023491/2024",
+      drugLicenseNo: "DC-DH-98412",
+      vatRegNo: "BIN-001928471-0101",
+      contactEmail: "contact@demopharmacy.com",
+      contactPhone: "01711000000",
+      address: "House 12, Road 5, Dhanmondi, Dhaka-1205",
+      website: "https://demopharmacy.local",
+      currency: "BDT",
+      timezone: "Asia/Dhaka",
+      openingHours: "08:00 AM - 11:00 PM (Daily)",
+      isActive: true,
+    },
     create: {
       name: "Demo Pharmacy",
       slug: TENANT_SLUG,
+      legalName: "Demo Healthcare & Pharmacy Ltd.",
+      tradeLicenseNo: "TRAD/DSCC/023491/2024",
+      drugLicenseNo: "DC-DH-98412",
+      vatRegNo: "BIN-001928471-0101",
+      contactEmail: "contact@demopharmacy.com",
+      contactPhone: "01711000000",
+      address: "House 12, Road 5, Dhanmondi, Dhaka-1205",
+      website: "https://demopharmacy.local",
+      currency: "BDT",
+      timezone: "Asia/Dhaka",
+      openingHours: "08:00 AM - 11:00 PM (Daily)",
       isActive: true,
     },
   });
@@ -281,14 +307,30 @@ async function main() {
     },
     update: {
       name: "Main Counter",
-      address: "Dhaka, Bangladesh",
+      legalName: "Demo Healthcare & Pharmacy Ltd. (Main Counter)",
+      tradeLicenseNo: "TRAD/DSCC/023491/2024",
+      drugLicenseNo: "DC-DH-98412",
+      vatRegNo: "BIN-001928471-0101",
+      contactEmail: "main.counter@demopharmacy.com",
+      contactPhone: "01711000000",
+      address: "House 12, Road 5, Dhanmondi, Dhaka-1205",
+      openingHours: "08:00 AM - 11:00 PM (Daily)",
+      timezone: "Asia/Dhaka",
       isActive: true,
     },
     create: {
       tenantId: tenant.id,
       name: "Main Counter",
       code: STORE_CODE,
-      address: "Dhaka, Bangladesh",
+      legalName: "Demo Healthcare & Pharmacy Ltd. (Main Counter)",
+      tradeLicenseNo: "TRAD/DSCC/023491/2024",
+      drugLicenseNo: "DC-DH-98412",
+      vatRegNo: "BIN-001928471-0101",
+      contactEmail: "main.counter@demopharmacy.com",
+      contactPhone: "01711000000",
+      address: "House 12, Road 5, Dhanmondi, Dhaka-1205",
+      openingHours: "08:00 AM - 11:00 PM (Daily)",
+      timezone: "Asia/Dhaka",
       isActive: true,
     },
   });
@@ -568,6 +610,33 @@ async function main() {
     managerId: manager.id,
     ownerId: owner.id,
   });
+
+  const configCount = await prisma.configurationActivityEvent.count({
+    where: { tenantId: tenant.id },
+  });
+  if (configCount === 0) {
+    const now = Date.now();
+    await prisma.configurationActivityEvent.createMany({
+      data: [
+        {
+          tenantId: tenant.id,
+          actorUserId: owner.id,
+          type: ConfigurationActivityType.BUSINESS_PROFILE_UPDATED,
+          section: "BUSINESS_PROFILE",
+          summary: "Business profile details and trade licenses initialized",
+          createdAt: new Date(now - 7 * 86400000),
+        },
+        {
+          tenantId: tenant.id,
+          actorUserId: owner.id,
+          type: ConfigurationActivityType.STORE_SETTINGS_UPDATED,
+          section: "STORE_SETTINGS",
+          summary: "Main store counter operating hours configured",
+          createdAt: new Date(now - 3 * 86400000),
+        },
+      ],
+    });
+  }
 
   console.log("Seed complete:");
   console.log(`  tenant: ${tenant.slug} (${tenant.id})`);

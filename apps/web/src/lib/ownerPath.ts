@@ -7,13 +7,19 @@
  * Batch T: `/purchasing` is the live list; `/purchasing/new`, `/purchasing/:poId`,
  * `/purchasing/:poId/receive`, and `/purchasing/:poId/edit` are registered subpaths.
  * Batch X: `/suppliers` is the live directory; `/suppliers/new`,
- * `/suppliers/returns`, `/suppliers/returns/new`, `/suppliers/returns/:manifestId`,
- * and `/suppliers/:supplierId` are registered subpaths.
+ * `/suppliers/issues` (Prod P9), `/suppliers/returns`, `/suppliers/returns/new`,
+ * `/suppliers/returns/:manifestId`, and `/suppliers/:supplierId` are registered
+ * subpaths.
  * Batch AG: `/customers` becomes a live chrome route; `/customers/new`,
  * `/customers/:id`, and `/customers/:id/review` are registered subpaths.
  * Batch AZ: `/staff/shifts` list and `/staff/shifts/:id` placeholder before
  * staff user detail params. Batch BC enables `/reports`; Batch BF adds `/reports/sales`.
+ * Prod P5 adds `/reports/inventory`. Prod P6 adds `/reports/purchasing`.
+ * Enhance D2 adds `/reports/product-movement`.
  * Batch BJ enables `/audit`; `/audit/:auditId` is registered for Batch BK detail.
+ * Batch BN enables `/settings` hub and `/settings/business` Business Profile.
+ * Batch BO enables `/settings/account` Account Profile (+ footer Owner Profile).
+ * Batch BP enables `/help` Help & Support (+ footer Help).
  */
 
 export const OWNER_PATHS = [
@@ -26,6 +32,8 @@ export const OWNER_PATHS = [
   "/staff",
   "/reports",
   "/audit",
+  "/settings",
+  "/help",
 ] as const;
 
 export type OwnerPath = (typeof OWNER_PATHS)[number];
@@ -82,6 +90,12 @@ if (
   ) {
     return true;
   }
+  if (
+    pathname.startsWith("/settings/") &&
+    pathname.length > "/settings/".length
+  ) {
+    return pathname === "/settings/business" || pathname === "/settings/account";
+  }
   return false;
 }
 
@@ -105,7 +119,20 @@ if (pathname === "/inventory" || pathname.startsWith("/inventory/")) {
   }
   if (pathname === "/reports" || pathname.startsWith("/reports/")) return "/reports";
   if (pathname === "/audit" || pathname.startsWith("/audit/")) return "/audit";
+  if (pathname === "/settings" || pathname.startsWith("/settings/")) return "/settings";
+  if (pathname === "/help") return "/help";
   return "/";
+}
+
+export type SettingsSubpath =
+  | { kind: "hub" }
+  | { kind: "business" }
+  | { kind: "account" };
+
+export function settingsSubpath(pathname: string): SettingsSubpath {
+  if (pathname === "/settings/business") return { kind: "business" };
+  if (pathname === "/settings/account") return { kind: "account" };
+  return { kind: "hub" };
 }
 
 export type AuditSubpath = { kind: "dashboard" } | { kind: "detail"; auditId: string };
@@ -117,10 +144,18 @@ export function auditSubpath(pathname: string): AuditSubpath {
   return { kind: "detail", auditId: decodeSegment(id) };
 }
 
-export type ReportsSubpath = { kind: "dashboard" } | { kind: "sales" };
+export type ReportsSubpath =
+  | { kind: "dashboard" }
+  | { kind: "sales" }
+  | { kind: "inventory" }
+  | { kind: "purchasing" }
+  | { kind: "productMovement" };
 
 export function reportsSubpath(pathname: string): ReportsSubpath {
   if (pathname === "/reports/sales") return { kind: "sales" };
+  if (pathname === "/reports/inventory") return { kind: "inventory" };
+  if (pathname === "/reports/purchasing") return { kind: "purchasing" };
+  if (pathname === "/reports/product-movement") return { kind: "productMovement" };
   return { kind: "dashboard" };
 }
 
@@ -135,7 +170,9 @@ export function ownerPathTitleKey(
   | "nav.customers"
   | "nav.staff"
   | "nav.reports"
-  | "nav.auditFefo" {
+  | "nav.auditFefo"
+  | "nav.settings"
+  | "nav.help" {
   if (path === "/sales") return "nav.sales";
   if (path === "/inventory") return "nav.inventory";
   if (path === "/purchasing") return "nav.purchasing";
@@ -144,6 +181,8 @@ export function ownerPathTitleKey(
   if (path === "/staff") return "nav.staff";
   if (path === "/reports") return "nav.reports";
   if (path === "/audit") return "nav.auditFefo";
+  if (path === "/settings") return "nav.settings";
+  if (path === "/help") return "nav.help";
   return "nav.dashboard";
 }
 
@@ -163,6 +202,7 @@ export type InventorySubpath =
   | { kind: "list" }
   | { kind: "expiry" }
   | { kind: "new" }
+  | { kind: "import" }
   | { kind: "detail"; productId: string }
   | { kind: "edit"; productId: string }
   | { kind: "receive"; productId: string }
@@ -176,13 +216,14 @@ function decodeSegment(raw: string): string {
   }
 }
 
-/** Slice 1 inventory routes. `/inventory/expiry` and `/inventory/new` before `/:id`. */
+/** Slice 1 inventory routes. `/inventory/expiry`, `/inventory/new`, `/inventory/import` before `/:id`. */
 export function inventorySubpath(pathname: string): InventorySubpath {
   if (pathname === "/inventory") return { kind: "list" };
   if (!pathname.startsWith("/inventory/")) return { kind: "list" };
   const parts = pathname.slice("/inventory/".length).split("/").filter(Boolean);
   if (parts.length === 1 && parts[0] === "expiry") return { kind: "expiry" };
   if (parts.length === 1 && parts[0] === "new") return { kind: "new" };
+  if (parts.length === 1 && parts[0] === "import") return { kind: "import" };
   if (parts.length === 2 && parts[1] === "edit" && parts[0]) {
     return { kind: "edit", productId: decodeSegment(parts[0]) };
   }
@@ -235,14 +276,17 @@ export function purchasingSubpath(pathname: string): PurchasingSubpath {
 export type SuppliersSubpath =
   | { kind: "list" }
   | { kind: "new" }
+  | { kind: "issues" }
   | { kind: "detail"; supplierId: string }
+  | { kind: "edit"; supplierId: string }
   | { kind: "returns" }
   | { kind: "returnsNew" }
   | { kind: "returnsManifest"; manifestId: string };
 
 /**
- * Batch X suppliers routes. `/suppliers/returns` and `/suppliers/new` before
- * `/:id` params; `/suppliers/returns/:manifestId` after `/suppliers/returns`.
+ * Batch X suppliers routes. `/suppliers/returns`, `/suppliers/new`, and
+ * `/suppliers/issues` (Prod P9) before `/:id` params; `/suppliers/:id/edit`
+ * (Prod P2); `/suppliers/returns/:manifestId` after `/suppliers/returns`.
  */
 export function suppliersSubpath(pathname: string): SuppliersSubpath {
   if (pathname === "/suppliers") return { kind: "list" };
@@ -250,11 +294,15 @@ export function suppliersSubpath(pathname: string): SuppliersSubpath {
   const parts = pathname.slice("/suppliers/".length).split("/").filter(Boolean);
   if (parts.length === 1 && parts[0] === "returns") return { kind: "returns" };
   if (parts.length === 1 && parts[0] === "new") return { kind: "new" };
+  if (parts.length === 1 && parts[0] === "issues") return { kind: "issues" };
   if (parts.length === 2 && parts[0] === "returns" && parts[1] === "new") {
     return { kind: "returnsNew" };
   }
   if (parts.length === 2 && parts[0] === "returns" && parts[1]) {
     return { kind: "returnsManifest", manifestId: decodeSegment(parts[1]) };
+  }
+  if (parts.length === 2 && parts[1] === "edit" && parts[0]) {
+    return { kind: "edit", supplierId: decodeSegment(parts[0]) };
   }
   if (parts.length === 1 && parts[0]) {
     return { kind: "detail", supplierId: decodeSegment(parts[0]) };
@@ -266,11 +314,12 @@ export type CustomersSubpath =
   | { kind: "list" }
   | { kind: "new" }
   | { kind: "detail"; customerId: string }
+  | { kind: "edit"; customerId: string }
   | { kind: "review"; customerId: string };
 
 /**
- * Batch AG customers routes. `/customers/new` before `/:id` params;
- * `/customers/:id/review` after detail. Batch AG renders placeholder shells only.
+ * Customers routes. `/customers/new` before `/:id` params;
+ * `/customers/:id/edit` and `/customers/:id/review` after detail.
  */
 export function customersSubpath(pathname: string): CustomersSubpath {
   if (pathname === "/customers") return { kind: "list" };
@@ -279,6 +328,9 @@ export function customersSubpath(pathname: string): CustomersSubpath {
   if (parts.length === 1 && parts[0] === "new") return { kind: "new" };
   if (parts.length === 2 && parts[1] === "review" && parts[0]) {
     return { kind: "review", customerId: decodeSegment(parts[0]) };
+  }
+  if (parts.length === 2 && parts[1] === "edit" && parts[0]) {
+    return { kind: "edit", customerId: decodeSegment(parts[0]) };
   }
   if (parts.length === 1 && parts[0]) {
     return { kind: "detail", customerId: decodeSegment(parts[0]) };

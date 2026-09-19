@@ -130,6 +130,25 @@ enum ShiftActivityType {
   CLOSE_SUBMITTED
   VARIANCE_REVIEWED
   CLOSED
+  /// Prod P10 — Owner requested a mid-shift / close cash count on desktop.
+  CASH_COUNT_REQUESTED
+  /// Prod P10 — Owner cancelled a pending cash-count request.
+  CASH_COUNT_CANCELLED
+}
+
+/// Prod P10 — Owner-requested cash count on an open shift (feeds close-shift counted cash).
+enum CashCountRequestStatus {
+  NONE
+  REQUESTED
+  CANCELLED
+  COMPLETED
+}
+
+/// Prod P12 — soft held / parked sale (no stock reservation).
+enum HeldSaleStatus {
+  HELD
+  DISCARDED
+  RESUMED
 }
 
 enum StockAuditStatus {
@@ -159,53 +178,84 @@ enum StockAuditActivityType {
   COMPLETED
 }
 
+enum ConfigurationActivityType {
+  BUSINESS_PROFILE_UPDATED
+  ACCOUNT_PROFILE_UPDATED
+  PASSWORD_CHANGED
+  STORE_SETTINGS_UPDATED
+  SECURITY_SETTINGS_UPDATED
+}
+
 // --- Tenancy & access ---
 
 model Tenant {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  legalName      String?
+  tradeLicenseNo String?
+  drugLicenseNo  String?
+  vatRegNo       String?
+  contactEmail   String?
+  contactPhone   String?
+  address        String?
+  website        String?
+  currency       String   @default("BDT")
+  timezone       String   @default("Asia/Dhaka")
+  openingHours   String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  stores               Store[]
-  users                User[]
-  refreshTokens        RefreshToken[]
-  products             Product[]
-  productUnits         ProductUnit[]
-  batches              Batch[]
-  customers            Customer[]
-  sales                Sale[]
-  saleItems            SaleItem[]
-  payments             Payment[]
-  inventoryEvents      InventoryEvent[]
-  batchRevisions       BatchRevision[]
-  suppliers            Supplier[]
-  purchaseOrders       PurchaseOrder[]
-  purchaseOrderLines   PurchaseOrderLine[]
-  goodsReceipts        GoodsReceipt[]
-  goodsReceiptLines    GoodsReceiptLine[]
-  returnManifests      ReturnManifest[]
-  returnManifestLines  ReturnManifestLine[]
-  staffActivityEvents  StaffActivityEvent[]
-  shifts               Shift[]
-  shiftActivityEvents  ShiftActivityEvent[]
-  stockAudits          StockAudit[]
-  stockAuditLines      StockAuditLine[]
-  stockAuditActivities StockAuditActivityEvent[]
-  fefoViolationRecords FefoViolationRecord[]
+  stores                  Store[]
+  users                   User[]
+  refreshTokens           RefreshToken[]
+  products                Product[]
+  productUnits            ProductUnit[]
+  batches                 Batch[]
+  customers               Customer[]
+  sales                   Sale[]
+  saleItems               SaleItem[]
+  payments                Payment[]
+  inventoryEvents         InventoryEvent[]
+  batchRevisions          BatchRevision[]
+  suppliers               Supplier[]
+  purchaseOrders          PurchaseOrder[]
+  purchaseOrderLines      PurchaseOrderLine[]
+  goodsReceipts           GoodsReceipt[]
+  goodsReceiptLines       GoodsReceiptLine[]
+  goodsReceiptDrafts      GoodsReceiptDraft[]
+  returnManifests         ReturnManifest[]
+  returnManifestLines     ReturnManifestLine[]
+  staffActivityEvents     StaffActivityEvent[]
+  shifts                  Shift[]
+  shiftActivityEvents     ShiftActivityEvent[]
+  stockAudits             StockAudit[]
+  stockAuditLines         StockAuditLine[]
+  stockAuditActivities    StockAuditActivityEvent[]
+  fefoViolationRecords    FefoViolationRecord[]
+  configurationActivities ConfigurationActivityEvent[]
+  terminalPresences       TerminalPresence[]
+  heldSales               HeldSale[]
 }
 
 model Store {
-  id        String   @id @default(cuid())
-  tenantId  String
-  name      String
-  code      String?
-  address   String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(cuid())
+  tenantId       String
+  name           String
+  code           String?
+  legalName      String?
+  tradeLicenseNo String?
+  drugLicenseNo  String?
+  vatRegNo       String?
+  contactEmail   String?
+  contactPhone   String?
+  address        String?
+  openingHours   String?
+  timezone       String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   users                User[]
@@ -216,10 +266,13 @@ model Store {
   batchRevisions       BatchRevision[]
   purchaseOrders       PurchaseOrder[]
   goodsReceipts        GoodsReceipt[]
+  goodsReceiptDrafts   GoodsReceiptDraft[]
   returnManifests      ReturnManifest[]
   shifts               Shift[]
   stockAudits          StockAudit[]
   fefoViolationRecords FefoViolationRecord[]
+  terminalPresences    TerminalPresence[]
+  heldSales            HeldSale[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -248,6 +301,7 @@ model User {
   batchRevisions            BatchRevision[]           @relation("BatchRevisionActor")
   purchaseOrdersCreated     PurchaseOrder[]           @relation("PurchaseOrderCreatedBy")
   goodsReceiptsReceived     GoodsReceipt[]            @relation("GoodsReceiptReceivedBy")
+  goodsReceiptDraftsUpdated GoodsReceiptDraft[]       @relation("GoodsReceiptDraftUpdatedBy")
   returnManifestsPrepared   ReturnManifest[]          @relation("ReturnManifestPreparedBy")
   returnManifestsDispatched ReturnManifest[]          @relation("ReturnManifestDispatchedBy")
   returnManifestsDecided    ReturnManifest[]          @relation("ReturnManifestDecidedBy")
@@ -259,12 +313,16 @@ model User {
   staffActivitiesActor      StaffActivityEvent[]      @relation("StaffActivityActor")
   shifts                    Shift[]                   @relation("ShiftCashier")
   shiftsReviewed            Shift[]                   @relation("ShiftReviewedBy")
+  shiftsCashCountRequested  Shift[]                   @relation("ShiftCashCountRequestedBy")
   shiftActivityEvents       ShiftActivityEvent[]      @relation("ShiftActivitySubject")
   shiftActivityEventsActor  ShiftActivityEvent[]      @relation("ShiftActivityActor")
   stockAuditsCreated        StockAudit[]              @relation("StockAuditCreatedBy")
   stockAuditsReviewed       StockAudit[]              @relation("StockAuditReviewedBy")
   stockAuditActivitiesActor StockAuditActivityEvent[] @relation("StockAuditActivityActor")
   fefoViolationsCorrected   FefoViolationRecord[]     @relation("FefoViolationCorrectedBy")
+  configurationActivities   ConfigurationActivityEvent[] @relation("ConfigurationActivityActor")
+  terminalPresences         TerminalPresence[]
+  heldSales                 HeldSale[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -664,6 +722,7 @@ model PurchaseOrder {
   createdBy     User                @relation("PurchaseOrderCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
   lines         PurchaseOrderLine[]
   goodsReceipts GoodsReceipt[]
+  receiptDraft  GoodsReceiptDraft?
 
   @@unique([tenantId, poNumber])
   @@index([tenantId])
@@ -691,6 +750,28 @@ model PurchaseOrderLine {
   @@unique([purchaseOrderId, productId])
   @@index([tenantId])
   @@index([productId])
+}
+
+/// Prod P15 — incomplete GRN form snapshot for resume (no stock effect until confirm).
+model GoodsReceiptDraft {
+  id              String   @id @default(cuid())
+  tenantId        String
+  storeId         String
+  purchaseOrderId String   @unique
+  updatedByUserId String
+  /// Partial receive UI payload (invoice/delivery/date + line lots).
+  payload         Json
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store         Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  updatedBy     User          @relation("GoodsReceiptDraftUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([tenantId, storeId])
+  @@index([updatedByUserId])
 }
 
 model GoodsReceipt {
@@ -857,6 +938,13 @@ model Shift {
   adjustmentReference String?
   reviewedAt          DateTime?
   reviewedByUserId    String?
+  /// Prod P10 — Owner request for cashier to enter counted cash (close-shift path).
+  cashCountStatus            CashCountRequestStatus @default(NONE)
+  cashCountRequestedAt       DateTime?
+  cashCountRequestedByUserId String?
+  cashCountNote              String?
+  cashCountCancelledAt       DateTime?
+  cashCountCompletedAt       DateTime?
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
 
@@ -864,6 +952,7 @@ model Shift {
   store      Store                @relation(fields: [storeId], references: [id], onDelete: Restrict)
   user       User                 @relation("ShiftCashier", fields: [userId], references: [id], onDelete: Restrict)
   reviewedBy User?                @relation("ShiftReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  cashCountRequestedBy User?      @relation("ShiftCashCountRequestedBy", fields: [cashCountRequestedByUserId], references: [id], onDelete: SetNull)
   sales      Sale[]
   activity   ShiftActivityEvent[]
 
@@ -871,6 +960,7 @@ model Shift {
   @@index([tenantId])
   @@index([tenantId, storeId, status])
   @@index([userId])
+  @@index([tenantId, cashCountStatus])
 }
 
 /// Lightweight audit timeline for a shift (open / sale / close / variance review).
@@ -1016,3 +1106,83 @@ model StockAuditActivityEvent {
   @@index([auditId])
   @@index([actorUserId])
 }
+
+// --- Configuration & Settings (M6 Slice 8) ---
+
+model ConfigurationActivityEvent {
+  id          String                    @id @default(cuid())
+  tenantId    String
+  actorUserId String?
+  type        ConfigurationActivityType
+  section     String?
+  summary     String
+  details     Json?
+  ipAddress   String?
+  createdAt   DateTime                  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actor  User?  @relation("ConfigurationActivityActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([actorUserId])
+}
+
+// --- Terminal presence (Prod P11) ---
+
+/// Desktop POS heartbeat — Owner web online/offline dots (no Manager web).
+model TerminalPresence {
+  id           String   @id @default(cuid())
+  tenantId     String
+  storeId      String
+  /// Stable per-install id (desktop localStorage).
+  terminalId   String
+  userId       String
+  lastSeenAt   DateTime
+  userAgent    String?
+  /// True while desktop Force Offline is sticky (still heartbeats).
+  forceOffline Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store  Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, terminalId])
+  @@index([tenantId])
+  @@index([tenantId, storeId])
+  @@index([tenantId, lastSeenAt])
+  @@index([userId])
+}
+
+// --- Soft held sales (Prod P12) ---
+
+/// Parked cart snapshot shared across terminals in a store when online.
+/// Soft hold only — does NOT reserve batch quantity.
+model HeldSale {
+  id         String         @id @default(cuid())
+  tenantId   String
+  storeId    String
+  userId     String
+  /// Desktop install id that parked the sale.
+  terminalId String
+  label      String
+  heldAt     DateTime
+  expiresAt  DateTime?
+  status     HeldSaleStatus @default(HELD)
+  /// Cart snapshot: { lines, customer, loyalty } — no tender drafts.
+  payload    Json
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store  Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, storeId, status])
+  @@index([tenantId, storeId, heldAt])
+  @@index([userId])
+}
+

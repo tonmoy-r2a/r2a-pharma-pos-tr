@@ -108,8 +108,19 @@ export const shiftActivityTypeSchema = z.enum([
   "CLOSE_SUBMITTED",
   "VARIANCE_REVIEWED",
   "CLOSED",
+  "CASH_COUNT_REQUESTED",
+  "CASH_COUNT_CANCELLED",
 ]);
 export type ShiftActivityType = z.infer<typeof shiftActivityTypeSchema>;
+
+/** Mirrors Prisma `CashCountRequestStatus` (Prod P10). */
+export const cashCountRequestStatusSchema = z.enum([
+  "NONE",
+  "REQUESTED",
+  "CANCELLED",
+  "COMPLETED",
+]);
+export type CashCountRequestStatus = z.infer<typeof cashCountRequestStatusSchema>;
 
 /** Mirrors Prisma `StockAuditStatus`. */
 export const stockAuditStatusSchema = z.enum([
@@ -147,4 +158,17 @@ export const stockAuditActivityTypeSchema = z.enum([
 export type StockAuditActivityType = z.infer<
   typeof stockAuditActivityTypeSchema
 >;
+
+/** Mirrors Prisma `ConfigurationActivityType` (Slice 8 Settings). */
+export const configurationActivityTypeSchema = z.enum([
+  "BUSINESS_PROFILE_UPDATED",
+  "ACCOUNT_PROFILE_UPDATED",
+  "PASSWORD_CHANGED",
+  "STORE_SETTINGS_UPDATED",
+  "SECURITY_SETTINGS_UPDATED",
+]);
+export type ConfigurationActivityType = z.infer<
+  typeof configurationActivityTypeSchema
+>;
+
 

@@ -3,9 +3,9 @@
  * Run: npm run smoke:m6y -w @r2a/web
  *
  * Source guards only (no live API). The form posts live to POST /owner/suppliers
- * (OWNER only) and always creates an ACTIVE supplier — Save as Draft is disabled
- * because there is no Edit Supplier page. Creating navigates to /suppliers/:id
- * (Supplier Details — Batch Z). No hard-coded ৳ totals.
+ * (OWNER only) and always creates an ACTIVE supplier — Save as Draft stays
+ * disabled (Wave 4 P15). Creating navigates to /suppliers/:id (Supplier Details).
+ * Edit Supplier is Prod P2. No hard-coded ৳ totals.
  */
 
 import { readFileSync, readdirSync } from "node:fs";
@@ -206,11 +206,6 @@ function checkAddSupplierPage(): void {
   assert(
     !shell.includes("suppliers.placeholder.new"),
     "AppShell must not use the superseded new placeholder",
-  );
-  assert(
-    !/EditSupplierPage/.test(all) &&
-      !shell.includes("suppliers.edit"),
-    "No Edit Supplier route may exist",
   );
   assert(
     !/₺/.test(all) && !/\$\d/.test(all),

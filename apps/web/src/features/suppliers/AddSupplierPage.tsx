@@ -76,9 +76,9 @@ function optionalNumberOrNull(value: string): number | null {
 
 /**
  * Add Supplier (Batch Y). Content region only — chrome is Batch B.
- * Live POST /owner/suppliers (OWNER only). New suppliers are always ACTIVE;
- * Save as Draft is disabled because there is no Edit Supplier page.
- * Creating navigates to /suppliers/:supplierId (Supplier Details — Batch Z).
+ * Live POST /owner/suppliers (OWNER only). New suppliers are always ACTIVE.
+ * Save as Draft stays disabled (Wave 4 P15). Creating navigates to
+ * /suppliers/:supplierId (Supplier Details — Batch Z). Edit is Prod P2.
  */
 export function AddSupplierPage() {
   const { t } = useLocale();
@@ -560,6 +560,15 @@ export function AddSupplierPage() {
           className="rounded-md border border-border bg-surface px-5 py-2 text-sm font-medium text-foreground hover:bg-canvas disabled:opacity-50"
         >
           {t("suppliers.add.cancel")}
+        </button>
+        <button
+          type="button"
+          disabled
+          aria-disabled="true"
+          title={t("suppliers.add.saveDraftSoon")}
+          className="cursor-not-allowed rounded-md border border-border bg-slate-100 px-5 py-2 text-sm font-medium text-muted"
+        >
+          {t("suppliers.add.saveDraft")}
         </button>
         <button
           type="button"

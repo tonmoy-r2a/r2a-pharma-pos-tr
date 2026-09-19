@@ -65,6 +65,8 @@ export type OwnerInventoryPayload = {
 export type OwnerInventoryQuery = {
   q?: string;
   tab?: InventoryTab;
+  /** Optional supplier deep-link filter (GET /owner/inventory?supplierId=). */
+  supplierId?: string;
   limit?: number;
   offset?: number;
 };
@@ -93,6 +95,8 @@ export async function fetchOwnerInventory(
   q.set("tab", query.tab ?? "all");
   const search = query.q?.trim();
   if (search) q.set("q", search);
+  const supplierId = query.supplierId?.trim();
+  if (supplierId) q.set("supplierId", supplierId);
 
   const { data, meta } = await apiRequestEnvelope<{
     items: OwnerInventoryRow[];

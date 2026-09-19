@@ -3,6 +3,7 @@ import {
   shiftStatusSchema,
   shiftVarianceDecisionSchema,
   shiftActivityTypeSchema,
+  cashCountRequestStatusSchema,
   paymentMethodSchema,
 } from "./enums";
 
@@ -29,6 +30,13 @@ export const shiftSchema = z.object({
   adjustmentReference: z.string().nullable().optional(),
   reviewedAt: z.coerce.date().nullable().optional(),
   reviewedByUserId: z.string().nullable().optional(),
+  /** Prod P10 — Owner cash-count request state. */
+  cashCountStatus: cashCountRequestStatusSchema.optional(),
+  cashCountRequestedAt: z.coerce.date().nullable().optional(),
+  cashCountRequestedByUserId: z.string().nullable().optional(),
+  cashCountNote: z.string().nullable().optional(),
+  cashCountCancelledAt: z.coerce.date().nullable().optional(),
+  cashCountCompletedAt: z.coerce.date().nullable().optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
@@ -66,6 +74,12 @@ export const shiftResolveSchema = z.object({
   adjustmentReference: z.string().optional(),
 });
 export type ShiftResolveInput = z.infer<typeof shiftResolveSchema>;
+
+/** Prod P10 — Owner request cash count on an OPEN shift. */
+export const shiftCashCountRequestSchema = z.object({
+  note: z.string().trim().max(500).optional(),
+});
+export type ShiftCashCountRequestInput = z.infer<typeof shiftCashCountRequestSchema>;
 
 /** Payment breakdown row for shift detail. */
 export const shiftPaymentBreakdownSchema = z.object({

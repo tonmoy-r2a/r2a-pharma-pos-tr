@@ -73,7 +73,11 @@ function checkClientAndPage(): void {
   assert(page.includes("disabled") && page.includes('t("reports.salesReport.exportHint")'), "Export Report must remain disabled with a hint");
   assert(page.includes("PaginationControls"), "Sales Report must include pagination controls");
   assert(page.indexOf('className="flex min-w-0 flex-col gap-4"') < page.indexOf('title={t("reports.salesReport.bestCategory")'), "Main report tables must sit in the main column before the right rail to avoid the large layout gap");
-  assert(dashboard.includes('navigate("/reports/sales")'), "Reports Dashboard Sales View Report must navigate to /reports/sales");
+  assert(
+    dashboard.includes('navigate("/reports/sales")') ||
+      dashboard.includes('href="/reports/sales"'),
+    "Reports Dashboard Sales View Report must navigate to /reports/sales",
+  );
   assert(!page.includes("৳2,45,600") && !page.includes("1,240") && !page.includes("Seclo 20mg"), "Sales Report page must not hard-code mock KPI/table values");
   console.log("  ✓ Sales Report uses live data and enabled dashboard CTA");
 }

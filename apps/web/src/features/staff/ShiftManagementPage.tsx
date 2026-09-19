@@ -16,6 +16,7 @@ import {
   type ShiftStatus,
 } from "@/lib/shifts";
 import { ReviewCashVarianceModal } from "./ReviewCashVarianceModal";
+import { RequestCashCountModal } from "./RequestCashCountModal";
 
 const PAGE_SIZE = 25;
 
@@ -46,6 +47,7 @@ export function ShiftManagementPage() {
   const [page, setPage] = useState(0);
   const [reload, setReload] = useState(0);
   const [reviewShift, setReviewShift] = useState<ShiftListRow | null>(null);
+  const [cashCountOpen, setCashCountOpen] = useState(false);
 
   const [result, setResult] = useState<ShiftListResult>(EMPTY_RESULT);
   const [kpis, setKpis] = useState<ShiftKpis>(EMPTY_KPIS);
@@ -142,9 +144,8 @@ export function ShiftManagementPage() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-muted disabled:cursor-not-allowed disabled:opacity-70"
-            disabled
-            title={t("shifts.disabled.requestCashCountHint")}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-canvas"
+            onClick={() => setCashCountOpen(true)}
           >
             {t("shifts.requestCashCount")}
           </button>
@@ -274,6 +275,15 @@ export function ShiftManagementPage() {
           onCancel={() => setReviewShift(null)}
           onResolved={() => {
             setReviewShift(null);
+            setReload((n) => n + 1);
+          }}
+        />
+      ) : null}
+      {cashCountOpen ? (
+        <RequestCashCountModal
+          onCancel={() => setCashCountOpen(false)}
+          onDone={() => {
+            setCashCountOpen(false);
             setReload((n) => n + 1);
           }}
         />

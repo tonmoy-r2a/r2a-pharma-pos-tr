@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   goodsReceiptCreateSchema,
+  goodsReceiptDraftUpsertSchema,
   purchaseOrderCreateSchema,
   purchaseOrderDraftUpdateSchema,
   purchaseOrderIdParamSchema,
@@ -75,6 +76,27 @@ purchasingRouter.post(
     body: goodsReceiptCreateSchema,
   }),
   purchasingController.createGoodsReceipt,
+);
+
+purchasingRouter.get(
+  "/purchase-orders/:poId/receipt-draft",
+  validate({ params: purchaseOrderIdParamSchema }),
+  purchasingController.getGoodsReceiptDraft,
+);
+
+purchasingRouter.put(
+  "/purchase-orders/:poId/receipt-draft",
+  validate({
+    params: purchaseOrderIdParamSchema,
+    body: goodsReceiptDraftUpsertSchema,
+  }),
+  purchasingController.upsertGoodsReceiptDraft,
+);
+
+purchasingRouter.delete(
+  "/purchase-orders/:poId/receipt-draft",
+  validate({ params: purchaseOrderIdParamSchema }),
+  purchasingController.deleteGoodsReceiptDraft,
 );
 
 purchasingRouter.get(

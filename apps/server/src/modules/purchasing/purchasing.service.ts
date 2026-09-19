@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { Prisma, prisma } from "@r2a/database";
 import type {
   GoodsReceiptCreateInput,
+  GoodsReceiptDraftUpsertInput,
   PurchaseOrderCreateInput,
   PurchaseOrderDraftUpdateInput,
   PurchaseOrderLineInput,
@@ -1526,6 +1527,12 @@ export async function createGoodsReceipt(
           include: purchaseOrderDetailInclude,
         }),
       ]);
+      await tx.goodsReceiptDraft.deleteMany({
+        where: {
+          tenantId: ctx.tenantId,
+          purchaseOrderId: purchaseOrder.id,
+        },
+      });
       return { receipt: createdReceipt, purchaseOrder: updatedPurchaseOrder };
     });
     return {
@@ -1541,6 +1548,109 @@ export async function createGoodsReceipt(
     }
     throw error;
   }
+}
+
+function serializeGoodsReceiptDraft(draft: {
+  id: string;
+  purchaseOrderId: string;
+  payload: unknown;
+  updatedAt: Date;
+  createdAt: Date;
+  updatedByUserId: string;
+}) {
+  return {
+    id: draft.id,
+    purchaseOrderId: draft.purchaseOrderId,
+    payload: draft.payload,
+    updatedAt: draft.updatedAt,
+    createdAt: draft.createdAt,
+    updatedByUserId: draft.updatedByUserId,
+  };
+}
+
+/** Prod P15 — get incomplete GRN draft for a PO (null if none). */
+export async function getGoodsReceiptDraft(ctx: TenantContext, poId: string) {
+  const purchaseOrder = await prisma.purchaseOrder.findFirst({
+    where: {
+      id: poId,
+      tenantId: ctx.tenantId,
+      ...purchaseOrderStoreScope(ctx),
+    },
+    select: { id: true, storeId: true, status: true },
+  });
+  if (!purchaseOrder) throw new AppError("Purchase order not found", 404);
+
+  const draft = await prisma.goodsReceiptDraft.findFirst({
+    where: {
+      tenantId: ctx.tenantId,
+      purchaseOrderId: poId,
+      ...purchaseOrderStoreScope(ctx),
+    },
+  });
+  return draft ? serializeGoodsReceiptDraft(draft) : null;
+}
+
+/** Prod P15 — upsert incomplete GRN draft (no stock movement). */
+export async function upsertGoodsReceiptDraft(
+  ctx: TenantContext,
+  poId: string,
+  input: GoodsReceiptDraftUpsertInput,
+) {
+  const purchaseOrder = await prisma.purchaseOrder.findFirst({
+    where: {
+      id: poId,
+      tenantId: ctx.tenantId,
+      ...purchaseOrderStoreScope(ctx),
+    },
+    select: { id: true, storeId: true, status: true },
+  });
+  if (!purchaseOrder) throw new AppError("Purchase order not found", 404);
+  if (
+    purchaseOrder.status !== "SENT" &&
+    purchaseOrder.status !== "PARTIALLY_RECEIVED"
+  ) {
+    throw new AppError(
+      "Only sent purchase orders can save a receipt draft",
+      409,
+    );
+  }
+
+  const draft = await prisma.goodsReceiptDraft.upsert({
+    where: { purchaseOrderId: poId },
+    create: {
+      tenantId: ctx.tenantId,
+      storeId: purchaseOrder.storeId,
+      purchaseOrderId: poId,
+      updatedByUserId: ctx.userId,
+      payload: input.payload as Prisma.InputJsonValue,
+    },
+    update: {
+      updatedByUserId: ctx.userId,
+      payload: input.payload as Prisma.InputJsonValue,
+    },
+  });
+  return serializeGoodsReceiptDraft(draft);
+}
+
+/** Prod P15 — discard incomplete GRN draft. */
+export async function deleteGoodsReceiptDraft(ctx: TenantContext, poId: string) {
+  const purchaseOrder = await prisma.purchaseOrder.findFirst({
+    where: {
+      id: poId,
+      tenantId: ctx.tenantId,
+      ...purchaseOrderStoreScope(ctx),
+    },
+    select: { id: true },
+  });
+  if (!purchaseOrder) throw new AppError("Purchase order not found", 404);
+
+  await prisma.goodsReceiptDraft.deleteMany({
+    where: {
+      tenantId: ctx.tenantId,
+      purchaseOrderId: poId,
+    },
+  });
+  return { deleted: true as const };
 }
 
 export async function listReturnQueue(

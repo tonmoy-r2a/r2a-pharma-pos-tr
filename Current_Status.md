@@ -1,6 +1,6 @@
 # R2A Pharmacy POS — Current Status
 
-**Last updated:** 2026-08-22
+**Last updated:** 2026-09-19
 **Purpose:** Single place to understand where the project stands when you return. Read this first in a new chat, then open the linked source-of-truth docs as needed.  
 **Maintainer note:** Update this file at the end of every completed milestone (or significant mid-milestone change).
 
@@ -12,14 +12,115 @@
 |------|--------|
 | **Product** | Offline-first, multi-tenant Pharmacy POS + Inventory SaaS (Bangladesh / emerging markets) |
 | **Phase** | Phase 1 MVP — DB + cloud API + desktop **M3 POS shell DONE**; **M4 DONE** (one-way sync). **M5 DONE** (RBAC + Receive stock + 409 copy + paged catalog + runbook) |
-| **Latest completed milestone** | **M5 — MVP hardening**; **M6 Owner Web Slice 1 A–O + W1–W6 DONE**, **Slice 2 P–AB DONE** (AC–AD **deferred**), **Slice 3 AE–AM DONE**, **Slice 4 Staff AN–AV DONE**, **Slice 5 Batch AX–BC DONE** (BD Slice 5 exit **DONE**), **Slice 6 BE–BG DONE**, **Slice 7 Batches BH–BJ DONE** |
-| **Next gated work** | **Slice 7 BJ DONE.** Next = **`Authorize M6 Batch BK`** (Audit Detail + Review modal + Apply FEFO; re-share required) or deferred Slice 2 **AC**. |
+| **Latest completed milestone** | **M5 — MVP hardening**; **M6 Owner Web Slice 1 A–O + W1–W6 DONE**, **Slice 2 P–AD DONE**, **Slice 3 AE–AM DONE**, **Slice 4 Staff AN–AV DONE**, **Slice 5 Batch AX–BC DONE** (BD Slice 5 exit **DONE**), **Slice 6 BE–BG DONE**, **Slice 7 BH–BL DONE**, **Slice 8 BM–BQ DONE** |
+| **Next gated work** | **Production track active** ([`PRODUCTION_REMAINING_EXECUTION.md`](PRODUCTION_REMAINING_EXECUTION.md)). Waves 0–4 **DONE**. Next = `Authorize Prod Batch S1` ([`PROD_WAVE_5_STUBS_EXECUTION.md`](PROD_WAVE_5_STUBS_EXECUTION.md)). Do **not** skip to X from status alone. Out of scope unchanged: bi-di · n8n · RLS · Manager web · M7. |
 | **Cloud database** | Neon PostgreSQL (Prisma migrate + seed applied; `RefreshToken` migration applied in M2) |
 | **Cloud API** | Express + TypeScript in `apps/server` — **real** (auth, tenant guard, inventory, FEFO, sales/sync ingest, sales/owner reads, product/batch management, OWNER-only suppliers, purchase orders, confirmed GRNs, and return manifests). General batch PATCH no longer mutates quantity. |
 | **Local desktop / SQLite / Tauri** | POS shell + one-way sync + Owner/Manager Receive Stock. Manual stock corrections are online-only signed deltas with required reason, expected version, idempotent event ID, 409 reload, and authoritative catalog refresh. |
 | **MongoDB / Mongoose** | Removed; do not reintroduce |
 
-**Bottom line:** M0–M5 remain DONE. **M6 IN PROGRESS** — Slices 1–6 **DONE** and Slice 7 **BH–BJ DONE**. Next = **`Authorize M6 Batch BK`** or deferred AC.
+**Bottom line:** M0–M5 remain DONE. **M6 IN PROGRESS** (production track). Slices 1–8 **DONE**; Waves 0–4 **DONE**. **Next = Authorize Prod Batch S1** via [`PRODUCTION_REMAINING_EXECUTION.md`](PRODUCTION_REMAINING_EXECUTION.md) + [`PROD_WAVE_5_STUBS_EXECUTION.md`](PROD_WAVE_5_STUBS_EXECUTION.md). Stubs (PIN / Print / MFS / Card / OTP) scheduled for **Wave 5** (not accepted). **M7 PENDING**. See §1b.
+
+---
+
+## 1b. Remaining work board
+
+**Production track:** [`PRODUCTION_REMAINING_EXECUTION.md`](PRODUCTION_REMAINING_EXECUTION.md) + wave child files. Authorize only with explicit `Authorize Prod Batch …` / `Authorize M6 Batch …` — not from this table alone.
+
+### IN SCOPE — Wave 1 (Slice 8 UI)
+
+| Batch | What | Home |
+|-------|------|------|
+| **BN** | Settings nav + hub + Business Profile | [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md) |
+| **BO** | Account Profile + footer Owner Profile | same |
+| **BP** | Help & Support (FAQ + status; tickets disabled) | same |
+| **BQ** | Slice 8 exit · catalog §28 · `smoke:m6s8` | same |
+
+**Prerequisite:** Wave 0 PASS. **Wave 1 / Slice 8 BM–BQ DONE** 2026-09-18.
+
+### IN SCOPE — Wave 2 (Slice 2 close) — **DONE** 2026-09-18
+
+| Batch | What | Home |
+|-------|------|------|
+| **AC** | Return Manifest Details + Dispatch / Decision / Complete | **DONE** 2026-09-18 — [`MILESTONE_6_EXECUTION.md`](MILESTONE_6_EXECUTION.md) |
+| **AD** | Slice 2 exit · catalog §22 · `smoke:m6s2` | **DONE** 2026-09-18 — same |
+
+### IN SCOPE — Wave 3 (parked wire-ups)
+
+| Batch | What |
+|-------|------|
+| **P1** | Edit Customer — **DONE** 2026-09-18 |
+| **P2** | Edit Supplier — **DONE** 2026-09-18 |
+| **P3** | View All POs by supplier — **DONE** 2026-09-18 |
+| **P4** | View All Products by supplier — **DONE** 2026-09-18 |
+| **P5** | Inventory Report page — **DONE** 2026-09-18 |
+| **P6** | Purchase Report page — **DONE** 2026-09-18 |
+| **P7** | CSV Export on loaded Owner pages — **DONE** 2026-09-18 |
+| **P8** | Desktop stock-audit count UI — **DONE** 2026-09-18 |
+| **P9** | Review All Issues aggregator — **DONE** 2026-09-18 |
+
+Home: [`PROD_WAVE_3_PARKED_EXECUTION.md`](PROD_WAVE_3_PARKED_EXECUTION.md).
+
+### IN SCOPE — Wave 4 (product notes)
+
+| Batch | What |
+|-------|------|
+| **P10** | Request Cash Count — **DONE** 2026-09-18 |
+| **P11** | Owner terminal presence (heartbeat + Owner web dots) — **DONE** 2026-09-18 |
+| **P12** | Cloud / shared held sales — **DONE** 2026-09-18 |
+| **P13** | Desktop Transactions → cloud `GET /sales` — **DONE** 2026-09-18 |
+| **P14** | CSV/Excel catalog import (Owner web) — **DONE** 2026-09-18 |
+| **P15** | Save as Draft — GRN receive resume — **DONE** 2026-09-18 |
+
+Home: [`PROD_WAVE_4_PRODUCT_EXECUTION.md`](PROD_WAVE_4_PRODUCT_EXECUTION.md).
+
+### IN SCOPE — Wave 5 (WAS ACCEPTED STUB → production)
+
+| Batch | What |
+|-------|------|
+| **S1** | Real Manager PIN (`pinHash` + verify) |
+| **S2** | Real receipt print IPC (ESC/POS) |
+| **S3** | Real MFS (intent + webhook + status UI) |
+| **S4** | Real card terminal adapter |
+| **S5** | Real loyalty OTP (SMS + verify token) |
+
+Home: [`PROD_WAVE_5_STUBS_EXECUTION.md`](PROD_WAVE_5_STUBS_EXECUTION.md). Do **not** treat these as “accepted / out of remaining work.”
+
+### IN SCOPE — Wave 6 (exit)
+
+| Batch | What |
+|-------|------|
+| **X1** | Composed `smoke:prod-exit` + package scripts |
+| **X2** | Status / master / RBAC / catalog sync; retire stub board |
+| **X3** | Pilot runbook appendix |
+
+Home: [`PROD_WAVE_6_EXIT_EXECUTION.md`](PROD_WAVE_6_EXIT_EXECUTION.md).
+
+### SIDE ENHANCEMENT — Owner Dashboard Intelligence (optional)
+
+**Not a Production wave.** Does **not** replace Wave 5. **Track DONE** (D1–D4, 2026-09-19).
+
+| Batch | What |
+|-------|------|
+| **D1** | Clickable Dashboard KPIs + inventory `?tab=` deep-links + Dashboard design |
+| **D2** | Product movement report (high demand / low sell / no sales; 30/90/180) |
+| **D3** | Sale-priority stock alarms (P1–P4) on Dashboard |
+| **D4** | Track exit — catalog / status / composed smoke |
+
+Home: [`ENHANCE_DASHBOARD_INTELLIGENCE_EXECUTION.md`](ENHANCE_DASHBOARD_INTELLIGENCE_EXECUTION.md). **D1–D4 DONE** (track exit 2026-09-19; composed `smoke:enhance-dash-intel`). Production next unchanged = `Authorize Prod Batch S1`. **Never invent Baki.**
+
+### STILL DISABLED (honest — keep disabled + hint)
+
+Branch switcher · Settings hub cards Branch / Roles / Preferences / Security / Audit & Data (beyond BN hints) · Help tickets / Create Ticket · Multi-branch.
+
+### OUT OF SCOPE (never from this track)
+
+Bi-directional sync · n8n (`workflows/`) · Postgres RLS · Manager web · M7 (multi-branch, transfers, Super Admin, enterprise RBAC) · Baki / on-account tender.
+
+### M7 PENDING
+
+Multi-branch, inter-branch transfers, Super Admin console, enterprise RBAC — **out of this track**.
+
 ---
 
 ## 2. Milestone board (authoritative progress)
@@ -34,7 +135,7 @@ Source of truth for milestone status: [`PROJECT_MASTER_PLAN.md`](PROJECT_MASTER_
 | **M3** | Desktop POS shell | **DONE** | Slice 1–6 (A–AP). Later screens → Slice 7+ when authorized. See `MILESTONE_3_EXECUTION.md` |
 | **M4** | One-way sync | **DONE** | Batches A–F. Queue IPC + `/sync/ingest` + offline complete + 15s worker + Sync Queue panel + catalog §19. See `MILESTONE_4_EXECUTION.md` |
 | **M5** | MVP hardening | **DONE** | Batches A–F. RBAC API + desktop Settings Receive stock + Sync Queue 409 copy + paged catalog pull + runbook + catalog §20. Print/PIN stay stubs. See `MILESTONE_5_EXECUTION.md`. |
-| **M6** | Growth (Phase 2) | **IN PROGRESS** | Owner Web Slice 1 **A–O DONE** + W1–W6 **DONE**. Slice 2 **P–AB DONE**; **AC–AD deferred**. Slice 3 **AE–AM DONE**. Slice 4 **Staff AN–AV DONE**. Slice 5 **Batch AX–BC DONE** (BD Slice 5 exit **DONE**). Slice 6 **BE–BG DONE**. Slice 7 **BH–BJ DONE**. |
+| **M6** | Growth (Phase 2) | **IN PROGRESS** | Production track active. Slices 1–8 **DONE** (Slice 2 P–AD exit **DONE**). Waves 0–4 **DONE**; next Wave 5 S1–S5. Out of scope: bi-di · n8n · RLS · Manager web. |
 | **M7** | Scale (Phase 3) | **PENDING** | Multi-branch, transfers, enterprise RBAC |
 
 ### Milestone 1 execution batches (all green)
@@ -120,7 +221,7 @@ Detailed batch plan: [`MILESTONE_3_EXECUTION.md`](MILESTONE_3_EXECUTION.md).
 | AD | MFS providers + invented confirm/result | **DONE** | 2026-08-12 |
 | AE | Slice 4 exit + API catalog update | **DONE** | 2026-08-12 |
 
-**M3:** **DONE** (2026-08-13). Later POS finds → Slice 7+. Real printer IPC / card SDK / MFS / cloud sales list / cloud shift remain TODOs. **No M4 unless authorized.**
+**M3:** **DONE** (2026-08-13). Later POS finds → Slice 7+. Print / card / MFS stubs are **ACCEPTED STUB** (out of remaining work). Owner `GET /sales` + Owner web Sales/Transaction Details (M6 E/H/I) and cloud shift (M6 AY) are **live**. **No M4 unless authorized.**
 
 ### Milestone 3 execution batches (Slice 5)
 
@@ -195,7 +296,7 @@ Detailed batch plan: [`MILESTONE_6_EXECUTION.md`](MILESTONE_6_EXECUTION.md).
 
 ### Milestone 6 execution batches (Slice 2)
 
-Detailed batch plan: [`MILESTONE_6_EXECUTION.md`](MILESTONE_6_EXECUTION.md) (Slice 2 section). **Paused at P–AB. AC–AD deferred.**
+Detailed batch plan: [`MILESTONE_6_EXECUTION.md`](MILESTONE_6_EXECUTION.md) (Slice 2 section). **P–AD DONE (Slice 2 complete).**
 
 | Batch | Title | Status | Date |
 |-------|-------|--------|------|
@@ -212,8 +313,8 @@ Detailed batch plan: [`MILESTONE_6_EXECUTION.md`](MILESTONE_6_EXECUTION.md) (Sli
 | Z | Supplier Details | **DONE** | 2026-08-19 |
 | AA | Expiry Returns queue | **DONE** | 2026-08-19 |
 | AB | Create Return Manifest page | **DONE** | 2026-08-19 |
-| AC | Manifest Details + 3 modals | **DEFERRED** | — |
-| AD | Slice 2 exit | **DEFERRED** | — |
+| AC | Manifest Details + 3 modals | **DONE** | 2026-09-18 |
+| AD | Slice 2 exit | **DONE** | 2026-09-18 |
 
 ### Milestone 6 execution batches (Slice 3)
 
@@ -274,15 +375,27 @@ Detailed batch plan: [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md) (Slice
 
 ### Milestone 6 execution batches (Slice 7)
 
-Detailed batch plan: [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md) (Slice 7 section). **BH–BJ DONE. BK–BL gated.**
+Detailed batch plan: [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md) (Slice 7 section). **BH–BL DONE. Slice 7 complete.**
 
 | Batch | Title | Status | Date |
 |-------|-------|--------|------|
 | BH | Prisma + Zod + seed (StockAudit + FEFO violations) | **DONE** | 2026-08-22 |
 | BI | Audit + FEFO APIs + ingest hook | **DONE** | 2026-08-22 |
 | BJ | Audit nav + Audit & FEFO dashboard | **DONE** | 2026-08-22 |
-| BK | Audit Detail + Review modal + Apply FEFO | **PENDING** | — |
-| BL | Slice 7 exit | **PENDING** | — |
+| BK | Audit Detail + Review modal + Apply FEFO | **DONE** | 2026-09-10 |
+| BL | Slice 7 exit (catalog §27 + composed smoke:m6s7 + status) | **DONE** | 2026-09-10 |
+
+### Milestone 6 execution batches (Slice 8)
+
+Detailed batch plan: [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md) (Slice 8 section). **BM–BQ DONE. Wave 2 / Slice 2 DONE. Wave 3 P1–P9 DONE. Wave 4 P10–P15 DONE. Next = `Authorize Prod Batch S1`.**
+
+| Batch | Title | Status | Date |
+|-------|-------|--------|------|
+| BM | Business profile schema + settings APIs | **DONE** (verified W0A) | 2026-09-10 / verify 2026-09-18 |
+| BN | Settings nav + hub + Business Profile | **DONE** | 2026-09-18 |
+| BO | Account Profile + footer Owner Profile | **DONE** | 2026-09-18 |
+| BP | Help & Support + footer Help | **DONE** | 2026-09-18 |
+| BQ | Slice 8 exit | **DONE** | 2026-09-18 |
 
 ## 3. Locked product & stack decisions
 
@@ -343,7 +456,7 @@ R2A-Pharmacy-POS/
 | UI | `@r2a/ui` | Bootstrap (M3A) |
 | Server | `@r2a/server` | **Implemented (M2)** |
 | Desktop | `@r2a/desktop` | **M3 DONE** — Slice 1–6 (Hold [F6] / Held list [F7]); later screens → Slice 7+ |
-| Web | `@r2a/web` | **M6 Slice 1 DONE + Slice 2 Batch T–AB** — OWNER login/chrome, Dashboard, Sales, Inventory, product and batch management, Receive Stock, Expiry Management, Purchasing list, Create Purchase Order, Purchase Order Details, Receive Stock against PO, Suppliers directory, Expiry Returns queue, Create Return Manifest. **Slice 3 AE–AM DONE** (Customers + POS Create + approve). **Slice 4 Staff AN–AV DONE** — Staff directory/add/details/edit/deactivate/reactivate done; Manifest Details deferred; Reports/Settings/… still disabled. |
+| Web | `@r2a/web` | **M6 Slice 1 DONE + Slice 2 P–AD DONE** — OWNER login/chrome, Dashboard, Sales, Inventory, product and batch management, Receive Stock, Expiry Management, Purchasing list, Create Purchase Order, Purchase Order Details, Receive Stock against PO, Suppliers directory, Expiry Returns queue, Create Return Manifest, Manifest Details + lifecycle modals. **Slice 3 AE–AM DONE** (Customers + POS Create + approve). **Slice 4 Staff AN–AV DONE**. **Slices 5–8 DONE** (Reports, Audit, Settings, Help). |
 
 ---
 
@@ -642,7 +755,7 @@ Do **not** start these unless the user authorizes the matching milestone:
 - ~~Generic Substitutes F4 (M3 Batch AG)~~ — **DONE**
 - ~~Settings Pharmacy / Receipt Header (M3 Batch AH)~~ — **DONE**
 - ~~Force Offline / Stay Offline (M3 Batch AI)~~ — **DONE**
-- ~~Transactions List (M3 Batch AJ)~~ — **DONE** (local log; no cloud GET /sales)
+- ~~Transactions List (M3 Batch AJ)~~ — **DONE** (+ **Prod P13** cloud `GET /sales` when online)
 - ~~Transactions Detail + Reprint (M3 Batch AK)~~ — **DONE** (Receipt Preview + print stub)
 - ~~Shift Open/Close + Slice 5 exit (M3 Batch AL)~~ — **DONE** (`Completed_API_lists.md` §17; `smoke:m3al`; soft gate New Sale → open shift)
 - ~~Held-sale store (M3 Batch AM)~~ — **DONE** (`heldSaleStore` + `HeldSaleSnapshot`; max 3; no UI)
@@ -676,7 +789,7 @@ Do **not** start these unless the user authorizes the matching milestone:
 - ~~M6 Batch AH: Customers list~~ — **DONE** (live `/customers` directory from `GET /owner/customers`; KPIs/tabs/search/Status/Source/Sort/pagination; Pending → review, Active/Inactive → detail, Add → `/customers/new`; `smoke:m6ah`)
 - ~~M6 Batch AJ: Customer Details~~ — **DONE** (live `/customers/:customerId` from `GET /owner/customers/:id`; header + KPIs (loyalty / total purchases / visits / last purchase) + Customer Information + Registration Information (Source/Branch/Submitted/Approved + Original Registration Values) + Purchase History rows → `/sales/:id` + Loyalty Activity with running balance + known-facts Timeline; Edit Customer + More Actions disabled; pending id redirects to Review; honest zeros/—; `GET /owner/customers/:id` additively returns `storeName` / `lastPurchaseAt` / `purchaseHistory.rows` / `loyaltyActivity.rows`; `smoke:m6aj`)
 - ~~M6 Batch AK: Registration Review + Approve/Reject~~ — **DONE** (live `/customers/:customerId/review` from `GET /owner/customers/:id`; read-only Registration Request (name/phone/source/submitted/branch/by) + live duplicate check + editable Review Profile (Owner corrects before approve); right rail Registration Info + Approval Action; Approve checkbox-gated modal → `POST /owner/customers/:id/approve` → Details (Active); Reject invented checkbox-gated modal + optional note → `POST /owner/customers/:id/reject` → list (row gone); Cancel → list; Active/Inactive id → Details; unsaved-changes guard; no POS Create (AL); `smoke:m6ak`)
-- Manifest Details (Slice 2 AC) and Slice 2 exit (AD) — **deferred**
+- ~~Manifest Details (Slice 2 AC)~~ — **DONE**; ~~Slice 2 exit (AD)~~ — **DONE**
 - ~~Owner web Staff Slice 4 AN–AV~~ — **DONE** (Owner-only staff list/add/details/edit/deactivate/reactivate; email login; temp password on create; self-lockout; `smoke:m6av`)
 - ~~M6 Slice 5 Batch AW–BB~~ — **DONE** (Prisma + Zod + seed for Shift; shift open/close/active + owner list/detail/resolve; sale ingest `shiftId`; dashboard `openShifts`/`cashVarianceToday` live; desktop cloud shift — opening float, counted cash, online required, `shiftId` passed to ingest; Owner web Staff → Shift Management live list + Shift Details Open/Closed balanced + Review Cash Variance modal/resolved details; `smoke:m6ax` 19/19; `smoke:m6ay` PASS; `smoke:m6az` PASS; `smoke:m6ba` PASS; `smoke:m6bb` PASS)
 - ~~M6 Slice 5 Batch BC~~ — **DONE** (Reports nav live at `/reports`; Reports Dashboard composes existing OWNER-only `GET /owner/dashboard` last7, `GET /owner/inventory-summary`, `GET /owner/purchase-orders`, `GET /owner/shifts`; KPIs/sales chart/inventory/purchasing/staff-activity cards live; Staff Activity + Shift Report link to `/staff/shifts`; Sales/Inventory/Purchase View Report disabled; `smoke:m6bc` PASS)
@@ -687,10 +800,10 @@ Do **not** start these unless the user authorizes the matching milestone:
 - ~~M6 Slice 7 Batch BH~~ — **DONE** (StockAudit + StockAuditLine + StockAuditActivityEvent + FefoViolationRecord Prisma schema, shared Zod `audit.ts`, demo audits/FEFO violations; no routes/UI; migrate + seed + `smoke:m2` PASS)
 - ~~M6 Slice 7 Batch BI~~ — **DONE** (OWNER-only audit dashboard/list/detail/review/correct APIs; OWNER/MANAGER audit start/lines/submit APIs; sale ingest creates OPEN FEFO violation records on real override; no Owner web audit UI; `smoke:m6bi` PASS)
 - ~~M6 Slice 7 Batch BJ~~ — **DONE** (Audit & FEFO nav live at `/audit`; dashboard uses live audit dashboard/list APIs plus existing expiry API; Generate Report disabled; `/audit/:auditId` links route to BK placeholder; `smoke:m6bj` PASS)
-- **M6 Slice 7–8 planned** — [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md): Slice 7 full StockAudit + FEFO, Slice 8 Settings/Help/Owner Profile. Next = **Authorize M6 Batch BK**
-- Audit & FEFO / Settings / Help / Owner Profile — enable in Slices 7–8; **Reports** live (Slice 5 BC); Sales Report detail in Slice 6
-- Manager web, bi-directional sync, n8n workflows, and Postgres RLS (later authorized M6 batches)
-- Real Card terminal SDK / real MFS provider APIs (backend-confirmed status; no cashier manual Trx) — later authorized work
+- ~~M6 Slice 7 Batches BK–BL~~ — **DONE** (Audit Detail + Slice 7 exit)
+- ~~M6 Slice 8 Batches BM–BQ~~ — **DONE** (Settings + Help + Owner Profile + exit). ~~Wave 2 AC–AD~~ — **DONE** (Slice 2 exit). Next = Wave 3 parked wire-ups — see §1b / [`PRODUCTION_REMAINING_EXECUTION.md`](PRODUCTION_REMAINING_EXECUTION.md)
+- Settings / Help / Owner Profile UI — **DONE** (Wave 1); **Reports** live (Slice 5–6)
+- Manager web, bi-directional sync, n8n workflows, and Postgres RLS (**OUT OF SCOPE** for production track)
 - Super Admin platform console (role exists; no admin product surface yet)
 
 ---
@@ -698,17 +811,20 @@ Do **not** start these unless the user authorizes the matching milestone:
 ## 10. Next step when you resume
 
 1. Read this file (`Current_Status.md`).
-2. Confirm M0–**M5** are **DONE**.
-3. **M6 Slices 1–6 DONE; Slice 7 BH–BJ DONE.** Slices 7–8 continue in [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md). Next = **`Authorize M6 Batch BK`** or deferred Slice 2 AC. Attach **`M6_SLICE_6_EXECUTION.md`** (not the full `MILESTONE_6_EXECUTION.md`) for Slice 7+ batches.
-4. Attach/reference:
+2. Confirm M0–**M5** are **DONE**; **M6 IN PROGRESS** (production track) — inventory in §1b.
+3. Attach **`PRODUCTION_REMAINING_EXECUTION.md`** + the **active wave** child file (Wave 1 → [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md)).
+4. Next = `Authorize Prod Batch S1` (Enhance Dashboard Intelligence D1–D4 **DONE** — see [`ENHANCE_DASHBOARD_INTELLIGENCE_EXECUTION.md`](ENHANCE_DASHBOARD_INTELLIGENCE_EXECUTION.md)).
+5. Also attach/reference:
    - `PROJECT_MASTER_PLAN.md`
    - `Current_Status.md`
    - `ROLES_AND_PERMISSIONS.md`
    - `docs/DEV_RUNBOOK.md`
-    - `M6_SLICE_6_EXECUTION.md` (Slices 6+ — **prefer this over full M6 file**)
-    - `Completed_API_lists.md` (§14–§28 as slices complete)
-    - `WEB_MISSING_FEATURES_PLAN.md`
+   - `Completed_API_lists.md` (§14–§28 as slices complete)
+   - `PROD_WAVE_5_STUBS_EXECUTION.md` (Wave 5 S1–S5)
+   - `ENHANCE_DASHBOARD_INTELLIGENCE_EXECUTION.md` (optional side track D1–D4)
+   - `WEB_MISSING_FEATURES_PLAN.md` (historical gap list; production inventory overrides)
    - Specs under `docs/` as needed
+6. Freeze archive [`REMAINING_WORK_EXECUTION.md`](REMAINING_WORK_EXECUTION.md) is **DONE** / superseded for in-scope product — do not re-run freeze batches A–D.
 
 ### Desktop run (Batches A–AP)
 
@@ -760,7 +876,7 @@ npm run dev:tauri -w @r2a/desktop
 - Hold **F6** / Held list **F7**; Shift soft gate; Force Offline; Transactions; F4; Settings header
 - Local SQLite catalog cache + `outbound_sync_queue` **table** (flush = **M4 DONE**)
 - **Later screens:** append Slice 7+ when shared — do not invent ahead
-- **Still later (not M3/M4/M5):** real printer IPC · real card SDK · real MFS APIs · cloud sales list / cloud shift · Owner web Create Customer · Slice 7+
+- **Accepted stubs & later milestones:** Print stub / card SDK / MFS APIs are **ACCEPTED STUB** (out of remaining work); cloud sales list / cloud shift (M6 E/AY) and Owner web Create Customer (M6 AF/AI) are **DONE**; remaining M6/M7 deferred/pending.
 
 ### Milestone 4 — delivered (closed 2026-08-14)
 
@@ -787,12 +903,22 @@ Current W6 amendment: Adjust stock now uses signed `POST /batches/:id/adjustment
 | Document | Use it for |
 |----------|------------|
 | [`Current_Status.md`](Current_Status.md) | “Where are we now?” (this file) |
+| [`PRODUCTION_REMAINING_EXECUTION.md`](PRODUCTION_REMAINING_EXECUTION.md) | **Production track master** — Waves 0–6 index, locks, inventory, authorize map |
+| [`PROD_WAVE_0_BOOTSTRAP_EXECUTION.md`](PROD_WAVE_0_BOOTSTRAP_EXECUTION.md) | Prod Wave 0 — BM verify + reopen board (W0A–W0C) |
+| [`PROD_WAVE_3_PARKED_EXECUTION.md`](PROD_WAVE_3_PARKED_EXECUTION.md) | Prod Wave 3 — parked wire-ups P1–P9 |
+| [`PROD_WAVE_4_PRODUCT_EXECUTION.md`](PROD_WAVE_4_PRODUCT_EXECUTION.md) | Prod Wave 4 — product notes P10–P15 |
+| [`PROD_WAVE_5_STUBS_EXECUTION.md`](PROD_WAVE_5_STUBS_EXECUTION.md) | Prod Wave 5 — kill stubs S1–S5 (PIN/Print/MFS/Card/OTP) |
+| [`PROD_WAVE_6_EXIT_EXECUTION.md`](PROD_WAVE_6_EXIT_EXECUTION.md) | Prod Wave 6 — exit smoke + governance + pilot runbook |
+| [`ENHANCE_DASHBOARD_INTELLIGENCE_EXECUTION.md`](ENHANCE_DASHBOARD_INTELLIGENCE_EXECUTION.md) | **Side enhancement DONE** — Owner Dashboard Intelligence D1–D4 (clickable KPIs, demand/low-sell, stock priority). Optional; not Wave 5 |
+| [`REMAINING_WORK_EXECUTION.md`](REMAINING_WORK_EXECUTION.md) | Freeze A–D **DONE** (archive). In-scope product **superseded** by production track |
 | [`Completed_API_lists.md`](Completed_API_lists.md) | Full cloud API catalog (M2) + M3 desktop §§14–18 + **M4 §19** + **M5 §20** |
 | [`PROJECT_MASTER_PLAN.md`](PROJECT_MASTER_PLAN.md) | Locked stack, milestones, DoD, agent rules |
 | [`MILESTONE_1_EXECUTION.md`](MILESTONE_1_EXECUTION.md) | How M1 was batched and verified |
 | [`MILESTONE_3_EXECUTION.md`](MILESTONE_3_EXECUTION.md) | How M3 slices/batches were executed (Slice 1–6 **DONE**; M3 closed) |
 | [`MILESTONE_4_EXECUTION.md`](MILESTONE_4_EXECUTION.md) | How M4 batches A–F were executed (**DONE**) |
 | [`MILESTONE_5_EXECUTION.md`](MILESTONE_5_EXECUTION.md) | How M5 batches A–F were executed (**DONE**) |
+| [`MILESTONE_6_EXECUTION.md`](MILESTONE_6_EXECUTION.md) | M6 Slices 1–5 (Slice 2 P–AD **DONE**) |
+| [`M6_SLICE_6_EXECUTION.md`](M6_SLICE_6_EXECUTION.md) | M6 Slices 6–8 (BN–BQ = Prod Wave 1) |
 | [`WEB_MISSING_FEATURES_PLAN.md`](WEB_MISSING_FEATURES_PLAN.md) | Owner web missing-feature W1–W6 execution and exit (**DONE**) |
 | [`ROLES_AND_PERMISSIONS.md`](ROLES_AND_PERMISSIONS.md) | Canonical RBAC (v2). Owner web = M6. No on-account tender |
 | [`docs/DEV_RUNBOOK.md`](docs/DEV_RUNBOOK.md) | Local setup: env files, Neon or Postgres Docker, seed, smokes |
@@ -815,12 +941,12 @@ Tracked so returning chats don?t re-learn tribal knowledge:
 6. **Super Admin:** Enum/JWT role only for now; separate platform admin setup later (not this POS product surface).
 7. **Refresh tokens (M2):** Hashed in `RefreshToken`; rotate on refresh; reuse of revoked token revokes all user sessions.
 8. **Sale `batchId`:** Optional on ingest ? omitted ? server FEFO; provided ? validate tenant/store/stock.
-9. **Force Offline / Stay Offline (desktop) — DONE Batch AI:** Cashier can override auto health on this terminal (badge menu or Settings → Connectivity). Sticky via forceOfflineStore (localStorage) until explicit **Go Online**; health probes / browser online / header re-probe ignored while forced. Badge shows Offline · Forced. Owner/Manager **presence** across terminals remains deferred (note #10).
-9b. **Transactions List + Detail (desktop) — DONE Batch AJ–AK:** Sidebar Transactions opens invented list from local `transactionLogStore` (localStorage, tenant+store; append on Cash/Card/MFS/loyalty complete). Cloud `GET /sales` + `GET /sales/:id` are **live (M6 E)**; Owner web Sales list is **live (M6 H)**; Owner web Transaction Details is **live (M6 I)**; desktop list stays local. ↑/↓ · Enter detail · Esc. Detail shows items/totals/method/customer/loyalty + Receipt Preview; Reprint → print stub.
-9c. **Shift Open/Close (desktop) — DONE Batch AL + soft gate (2026-08-13):** Local `shiftStore` (tenant+store). Counter Ready Active Shift reads it. Connectivity badge stays **independent** (health / Force Offline only — do **not** couple badge to shift). **Soft gate:** New Sale [F2] (sidebar / Counter Ready / Sale Completed) requires an open shift → otherwise info toast + opens Shift panel. Closing shift mid-sale still allowed. No cloud shift API yet (TODO when authorized).
-9d. **Hold / Park Sale (desktop) — Slice 6 AP DONE:** `heldSaleStore` + Hold **F6** + Held list **F7** (toggle; cart Held n/3) + resume / discard confirm. Soft hold — no reservation. Resume rechecks live batch/expiry/qty (strip unsellable, clamp short stock; keep hold if none remain). Mid-payment Hold aborts card/MFS stubs and does not ingest / Sale Completed. **No** cloud hold / multi-terminal shared holds. See `MILESTONE_3_EXECUTION.md` Slice 6 + `Completed_API_lists.md` §18.
-10. **Deferred — Owner/Manager terminal presence:** Owner/Manager should see each cashier/terminal **online (green) / offline (red)** in real time. Needs cloud heartbeat/presence from desktop + owner/manager UI (likely **M6 owner web** or a later authorized slice). Do not invent presence APIs until authorized.
-11. **Deferred ? catalog onboarding (CSV / Excel import):** Real pharmacies onboard hundreds?thousands of SKUs from supplier/Excel lists. Owner/manager bulk import into Neon is the expected path; **not designed or built yet**. Today: seed demo + product/batch APIs only. Do not invent import UI/API until authorized.
+9. **Force Offline / Stay Offline (desktop) — DONE Batch AI:** Cashier can override auto health on this terminal (badge menu or Settings → Connectivity). Sticky via forceOfflineStore (localStorage) until explicit **Go Online**; health probes / browser online / header re-probe ignored while forced. Badge shows Offline · Forced. Owner web terminal presence is **Prod P11 DONE** (note #10).
+9b. **DONE Prod P13 — Transactions List + Detail (desktop):** Sidebar Transactions opens store-scoped sales. **Online:** `GET /api/v1/sales` (+ `GET /sales/:id` for detail); merge local-only rows still pending ingest. **Offline:** local `transactionLogStore` (tenant+store; append on Cash/Card/MFS/loyalty complete). Cloud APIs live since M6 E; Owner web Sales (H) / Transaction Details (I) unchanged. ↑/↓ · Enter detail · Esc. Detail shows items/totals/method/customer/loyalty + Receipt Preview; Reprint → print stub until S2.
+9c. **Shift Open/Close (desktop) — DONE Batch AL + soft gate + cloud shift (M6 Batch AY):** Local `shiftStore` (tenant+store) caches the active cloud shift with opening float, counted cash, and `shiftId` passed to sale ingest. Owner web Shift Management and variance review are live (M6 Batches AZ–BB). Connectivity badge stays **independent** (health / Force Offline only — do **not** couple badge to shift). **Soft gate:** New Sale [F2] (sidebar / Counter Ready / Sale Completed) requires an open shift → otherwise info toast + opens Shift panel. Closing shift mid-sale still allowed.
+9d. **DONE Prod P12 — Hold / Park Sale (cloud soft holds):** Soft hold — **no** stock reservation. Online: store-scoped `HeldSale` via `POST/GET /api/v1/held-sales` (+ discard / resume-ack); F6/F7 shared across terminals in the same store (max 3). Offline: local `heldSaleStore` fallback. Reconnect lock: **cloud canonical**; push local-only holds on Go Online if not discarded. Resume rechecks live batch/expiry/qty (strip/clamp; keep hold if none remain). Mid-payment Hold still aborts card/MFS stubs and does not ingest. Hard inventory lock on holds remains out of scope. See `Completed_API_lists.md` §18.
+10. **DONE Prod P11 — Owner terminal presence:** Desktop posts `POST /api/v1/terminals/heartbeat` (~20s) while authenticated; continues under Force Offline with `forceOffline: true` so Owner sees **Forced Offline**. Owner Dashboard **Terminals** card polls `GET /api/v1/owner/terminals/presence` (green Online / red Offline / amber Forced Offline + last-seen). Stale threshold 45s. No Manager web surface. No invented terminals.
+11. **DONE Prod P14 — catalog onboarding (CSV / Excel import):** Owner web **Import Catalog** at `/inventory/import`. Upload CSV/XLSX → dry-run (create/update/error) → commit upserts by **sku** (+ packaging units via `factorToBase`). Caps: **2 MiB** file, **2000** rows. APIs: `POST /api/v1/owner/catalog/import/dry-run` + `/commit` (**OWNER**). No cost/sell columns (receive owns pricing). No desktop Excel path. No bi-di / n8n.
 12. **Goods receiving / stock adjust UX — W6 current contract:** Owner/Manager **Settings → Receive stock** (online): Add lot `POST /api/v1/batches`; Adjust stock `POST /api/v1/batches/:id/adjustments` with signed `quantityChange`, required reason, `expectedVersion`, and idempotent `eventId`. Cashier does not see the section. A 409 reloads current values without auto-retry; success triggers authoritative `catalogPull`. No offline GRN queue. General batch PATCH cannot mutate quantity.
 12b. **409 conflict UX — M5 Batch D DONE:** Failed Sync Queue rows map `last_error` (insufficient stock / 409 / conflict) to i18n `syncQueue.conflictReason` plus raw `last_error` as data. Enter still Retry. **No** void / delete sale. Online ingest 409 still stays on payment. Stage with `__r2aMarkHeadSyncDead()` (defaults to `409 Insufficient stock`). Catalog **§20**.
 13. **Product catalog display fields (locked):** `manufacturer`, `strength`, `form` are optional on `Product` (schema + Zod + seed + desktop cache). Search UI shows them; free-text `q` also matches these fields. Do not invent from `description`.
@@ -844,6 +970,41 @@ user-facing strings. Runtime/domain data and receipt content remain untranslated
 
 | Date | Change |
 |------|--------|
+| 2026-09-19 | **Enhance Batch D4 / track DONE** — catalog §26A/§26B finalized; composed `smoke:enhance-dash-intel` PASS; Enhance Dashboard Intelligence closed. Production next unchanged = `Authorize Prod Batch S1`. |
+| 2026-09-18 | **Enhance Batch D3 DONE** — OWNER `GET /owner/reports/stock-priority` (P1–P4 from D2 movement helper); Dashboard Stock priority panel; `smoke:enhance-d3` PASS. Next Enhance = `Authorize Enhance Batch D4`. Production next unchanged = `Authorize Prod Batch S1`. |
+| 2026-09-18 | **Enhance Batch D2 DONE** — OWNER `GET /owner/reports/product-movement` (SaleItem bands 30/90/180); Owner web `/reports/product-movement` + hub/Dashboard CTA; CSV of loaded rows; `smoke:enhance-d2` PASS. Next Enhance = `Authorize Enhance Batch D3`. Production next unchanged = `Authorize Prod Batch S1`. |
+| 2026-09-18 | **Enhance Batch D1 DONE** — clickable Dashboard KPIs (deep-link matrix), inventory `?tab=` URL sync (keeps `supplierId`), FEFO View audit → `/audit`, View reports → `/reports`, shift tiles → `/staff/shifts`, Dashboard polish. `smoke:enhance-d1` PASS. Next Enhance = `Authorize Enhance Batch D2`. Production next unchanged = `Authorize Prod Batch S1`. |
+| 2026-09-18 | **Side enhancement authored** — [`ENHANCE_DASHBOARD_INTELLIGENCE_EXECUTION.md`](ENHANCE_DASHBOARD_INTELLIGENCE_EXECUTION.md) (D1–D4: clickable KPIs, product movement, stock priority, design). Optional; does not replace Wave 5. Production next = still `Authorize Prod Batch S1`; Enhance = `Authorize Enhance Batch D1`. Never invent Baki. |
+| 2026-09-18 | **Prod Batch P15 / Wave 4 DONE** — GRN Save as Draft (`GoodsReceiptDraft` + OWNER receipt-draft GET/PUT/DELETE); receive UI resume; Confirm clears draft; Supplier/Manifest drafts stay disabled with hints; `smoke:prod-p15` PASS. Next = `Authorize Prod Batch S1`. |
+| 2026-09-18 | **Prod Batch P14 DONE** — Owner Catalog Import `/inventory/import`; CSV/XLSX dry-run + commit upsert by sku (+ units); OWNER `/owner/catalog/import/*`; max 2 MiB / 2000 rows; §12 #11 → DONE; `smoke:prod-p14` PASS. Next = `Authorize Prod Batch P15`. |
+| 2026-09-18 | **Prod Batch P13 DONE** — Desktop Transactions → cloud `GET /sales` (+ `/:id`); online store-scoped list/detail + local-only merge; offline local log; Owner web Sales unchanged; `smoke:prod-p13` PASS. Next = `Authorize Prod Batch P14`. |
+| 2026-09-18 | **Prod Batch P12 DONE** — Cloud soft held sales (`HeldSale` + cashier `/held-sales` CRUD); desktop online cloud / offline local + Go Online reconcile (cloud canonical); max 3 store-scoped; no stock reservation; `smoke:prod-p12` PASS. Next = `Authorize Prod Batch P13`. |
+| 2026-09-18 | **Prod Batch P12 DONE** — Cloud soft held sales (`HeldSale` + `/api/v1/held-sales`); §12 9d; `smoke:prod-p12` PASS. Next = `Authorize Prod Batch P13`. |
+| 2026-09-18 | **Prod Batch P11 DONE** — Terminal presence (`TerminalPresence` + heartbeat/presence APIs); Dashboard Terminals card; Force Offline continues heartbeat with flag; §12 #10 → DONE; `smoke:prod-p11` PASS. Next was `Authorize Prod Batch P12`. |
+| 2026-09-18 | **Prod Batch P10 DONE** — Request Cash Count: Shift `cashCount*` fields; OWNER `POST .../cash-count-request` (+ cancel); Owner web modal; desktop poll/banner → close-shift counted cash; `smoke:prod-p10` PASS. Next = `Authorize Prod Batch P11`. |
+| 2026-09-18 | **Prod Batch P9 / Wave 3 DONE** — Review All Issues `/suppliers/issues` composes `GET /owner/suppliers` attention; invent to match theme; `smoke:prod-p9` PASS. Next = `Authorize Prod Batch P10`. |
+| 2026-09-18 | **Prod Batch P8 DONE** — Desktop Settings → Stock Audit (OWNER/MANAGER); online `POST /audits/start|lines|submit`; invent to match theme; `smoke:prod-p8` PASS. Next was `Authorize Prod Batch P9`. |
+| 2026-09-18 | **Prod Batch P7 DONE** — Client CSV export on Sales/Inventory/Purchase reports, Audit list+lines, Shift detail summary, Expiry Returns (`lib/csvExport.ts`); Print stays disabled pending Wave 5 S2; `smoke:prod-p7` PASS. Next was `Authorize Prod Batch P8`. |
+| 2026-09-18 | **Prod Batch P6 DONE** — Purchase Report `/reports/purchasing` composes `GET /owner/purchase-orders`; invent to match theme; `smoke:prod-p6` PASS. Next was `Authorize Prod Batch P7`. |
+| 2026-09-18 | **Prod Batch P5 DONE** — Inventory Report `/reports/inventory` composes inventory-summary + inventory (low/out) + expiry; invent to match theme; `smoke:prod-p5` PASS. Next was `Authorize Prod Batch P6`. |
+| 2026-09-18 | **Prod Batch P4 DONE** — Supplier Details View All Products → `/inventory?supplierId=…`; additive `supplierId` on `GET /owner/inventory` (ACTIVE batches + PO lines); `smoke:prod-p4` PASS. Next was `Authorize Prod Batch P5`. |
+| 2026-09-18 | **Prod Batch P3 DONE** — Supplier Details View All POs → `/purchasing?supplierId=…`; PO list client sends `supplierId`; filter chip + clear; `smoke:prod-p3` PASS. Next was `Authorize Prod Batch P4`. |
+| 2026-09-18 | **Prod Batch P2 DONE** — Edit Supplier `/suppliers/:id/edit`; PATCH ACTIVE↔HOLD (+ DRAFT if already); `smoke:prod-p2` PASS. Next was `Authorize Prod Batch P3`. |
+| 2026-09-18 | **Prod Batch P1 DONE** — Edit Customer `/customers/:id/edit`; PATCH additive DOB/gender/address + ACTIVE↔INACTIVE; `smoke:prod-p1` PASS. Next was `Authorize Prod Batch P2`. |
+| 2026-09-18 | **M6 Batch AD / Slice 2 DONE** — catalog §22 + composed `smoke:m6s2` PASS; Wave 2 complete. Next was `Authorize Prod Batch P1`. |
+| 2026-09-18 | **M6 Batch AC DONE** — live Return Manifest Details at `/suppliers/returns/:manifestId` + Dispatch / Decision / Complete modals; invent to match theme; `smoke:m6ac` PASS. Next was `Authorize M6 Batch AD`. |
+| 2026-09-18 | **M6 Batch BQ / Slice 8 DONE** — catalog §28; composed `smoke:m6s8` PASS; Wave 1 complete. Next was `Authorize M6 Batch AC`. |
+| 2026-09-18 | **M6 Batch BP DONE** — Help & Support + footer Help; `smoke:m6bp` PASS. Next = `Authorize M6 Batch BQ`. |
+| 2026-09-18 | **M6 Batch BO DONE** — Account Profile + footer Owner Profile; `smoke:m6bo` PASS. Next was `Authorize M6 Batch BP`. |
+| 2026-09-18 | **M6 Batch BN DONE** — Settings hub + Business Profile (invent to match theme); `smoke:m6bn` PASS. Next was `Authorize M6 Batch BO`. |
+| 2026-09-18 | **Prod W0C / Wave 0 DONE** — master plan §9 → BN; Slice 8 header reopened; freeze superseded confirmed; production master next = BN. |
+| 2026-09-18 | **Prod W0B** — §1 / §1b production board (Waves 1–6 inventory); ACCEPTED STUB → Wave 5; M6 row BM verified; §10 resume → production track / W0C then BN. |
+| 2026-09-18 | **Prod W0A** — BM migration confirmed applied; `smoke:m6bm` PASS (18/18); Zod + OWNER settings/help routes verified. |
+| 2026-09-18 | **Production Remaining Work execution files authored** — master + Waves 0/3/4/5/6; Waves 1–2 bridge to M6 parents. Next was `Authorize Prod Batch W0A`. |
+| 2026-09-10 | **Remaining Work Batch D** — light-sync master plan + Slice 6+ execution header + freeze exit (Batches A–D DONE) |
+| 2026-09-10 | **Remaining Work Batch C** — stale TODO cleanup (cloud shift M6 AY + Owner sales M6 E/H/I already live; §12 9c updated) |
+| 2026-09-10 | **Remaining Work Batch B** — pause next-gated-work (M6 paused; remaining deferred/undone) |
+| 2026-09-10 | **Remaining Work Batch A** — §1b remaining work board added (M6 DEFERRED / PARKED / UNDONE, other notes, M7 PENDING, ACCEPTED STUB). §1 Next gated work unchanged (still `Authorize M6 Batch BK`). |
 | 2026-08-08 | Created after M0 + M1 completion; M2 is next pending milestone |
 | 2026-08-08 | Linked `MILESTONE_2_EXECUTION.md`; recorded M2 locked decisions (fields, envelope, staff, FEFO, Super Admin out of scope) |
 | 2026-08-09 | **M2 marked DONE** ? Batches A?H complete; smoke 13/13; documented API surface, refresh tokens, next = M3 |

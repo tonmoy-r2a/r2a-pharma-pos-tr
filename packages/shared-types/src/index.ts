@@ -15,3 +15,8 @@ export * from "./sync";
 export * from "./staff";
 export * from "./shift";
 export * from "./audit";
+export * from "./settings";
+export * from "./terminal";
+export * from "./heldSale";
+export * from "./catalogImport";
+

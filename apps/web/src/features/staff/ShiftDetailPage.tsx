@@ -3,6 +3,7 @@ import {
   CalendarClock,
   CheckCircle2,
   Clock3,
+  Download,
   Landmark,
   Loader2,
   UserRound,
@@ -10,8 +11,9 @@ import {
   FileCheck2,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import { useLocale } from "@/i18n";
+import { useLocale, type MessageKey } from "@/i18n";
 import { ApiError } from "@/lib/api";
+import { csvStamp, downloadCsv } from "@/lib/csvExport";
 import { formatCount, formatDateTime, formatSalesDateTime, formatTaka, formatTime, initialsFromName } from "@/lib/format";
 import { useOwnerPath } from "@/lib/OwnerPathProvider";
 import {
@@ -21,6 +23,13 @@ import {
   type ShiftStatus,
 } from "@/lib/shifts";
 import { ReviewCashVarianceModal } from "./ReviewCashVarianceModal";
+import { RequestCashCountModal } from "./RequestCashCountModal";
+
+const VARIANCE_DECISION_KEYS = {
+  ACCEPTED_DIFFERENCE: "shifts.review.decision.ACCEPTED_DIFFERENCE",
+  COUNT_CORRECTED: "shifts.review.decision.COUNT_CORRECTED",
+  OTHER: "shifts.review.decision.OTHER",
+} as const satisfies Record<string, MessageKey>;
 
 export function ShiftDetailPage({ shiftId }: { shiftId: string }) {
   const { t } = useLocale();
@@ -30,6 +39,7 @@ export function ShiftDetailPage({ shiftId }: { shiftId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [cashCountOpen, setCashCountOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,20 +93,69 @@ export function ShiftDetailPage({ shiftId }: { shiftId: string }) {
 
   if (!detail) return null;
 
-  const openedAt = detail.openedAt;
-  const closedAt = detail.closedAt;
-  const expectedCash = moneyNumber(detail.expectedCash) || moneyNumber(detail.openingFloat) + moneyNumber(detail.cashSales);
-  const countedCash = detail.countedCash == null ? null : moneyNumber(detail.countedCash);
-  const variance = detail.variance == null ? 0 : moneyNumber(detail.variance);
-  const hasUnresolvedVariance = detail.status === "FLAGGED" && variance !== 0;
-  const hasResolvedVariance = detail.status === "CLOSED" && variance !== 0 && Boolean(detail.reviewedAt || detail.varianceDecision);
-  const totalSales = moneyNumber(detail.cashSales) + moneyNumber(detail.cardSales) + moneyNumber(detail.mfsSales);
-  const posActivityUrl = buildPosActivityUrl(detail);
+  const shift = detail;
+  const openedAt = shift.openedAt;
+  const closedAt = shift.closedAt;
+  const expectedCash = moneyNumber(shift.expectedCash) || moneyNumber(shift.openingFloat) + moneyNumber(shift.cashSales);
+  const countedCash = shift.countedCash == null ? null : moneyNumber(shift.countedCash);
+  const variance = shift.variance == null ? 0 : moneyNumber(shift.variance);
+  const hasUnresolvedVariance = shift.status === "FLAGGED" && variance !== 0;
+  const hasResolvedVariance = shift.status === "CLOSED" && variance !== 0 && Boolean(shift.reviewedAt || shift.varianceDecision);
+  const totalSales = moneyNumber(shift.cashSales) + moneyNumber(shift.cardSales) + moneyNumber(shift.mfsSales);
+  const posActivityUrl = buildPosActivityUrl(shift);
 
-  const breakdown = new Map(detail.breakdown.map((row) => [row.method, moneyNumber(row.amount)]));
-  const cashBreakdown = breakdown.get("CASH") ?? moneyNumber(detail.cashSales);
-  const cardBreakdown = breakdown.get("CARD") ?? moneyNumber(detail.cardSales);
-  const mfsBreakdown = breakdown.get("MFS") ?? moneyNumber(detail.mfsSales);
+  const breakdown = new Map(shift.breakdown.map((row) => [row.method, moneyNumber(row.amount)]));
+  const cashBreakdown = breakdown.get("CASH") ?? moneyNumber(shift.cashSales);
+  const cardBreakdown = breakdown.get("CARD") ?? moneyNumber(shift.cardSales);
+  const mfsBreakdown = breakdown.get("MFS") ?? moneyNumber(shift.mfsSales);
+
+  function exportCsv() {
+    const summaryHeaders = [
+      t("shifts.detail.export.field"),
+      t("shifts.detail.export.value"),
+    ];
+    const summaryRows: string[][] = [
+      [t("shifts.col.shift"), shift.shiftNo],
+      [t("shifts.col.cashier"), shift.user?.name ?? t("shifts.detail.unknownCashier")],
+      [t("shifts.col.status"), shift.status],
+      [t("shifts.detail.audit.openedAt"), formatSalesDateTime(openedAt)],
+      [t("shifts.detail.audit.closedAt"), closedAt ? formatSalesDateTime(closedAt) : ""],
+      [t("shifts.detail.kpi.float"), String(moneyNumber(shift.openingFloat))],
+      [t("shifts.detail.cashSales"), String(moneyNumber(shift.cashSales))],
+      [t("shifts.detail.expectedCash"), String(expectedCash)],
+      [
+        t("shifts.detail.countedCash"),
+        countedCash == null ? "" : String(countedCash),
+      ],
+      [t("shifts.col.variance"), String(variance)],
+      [t("shifts.detail.totalSales"), String(totalSales)],
+      [t("shifts.detail.payment.cash"), String(cashBreakdown)],
+      [t("shifts.detail.payment.card"), String(cardBreakdown)],
+      [t("shifts.detail.payment.mfs"), String(mfsBreakdown)],
+      [t("shifts.col.txns"), String(shift.txnCount)],
+    ];
+    if (shift.varianceDecision) {
+      const decisionKey =
+        VARIANCE_DECISION_KEYS[
+          shift.varianceDecision as keyof typeof VARIANCE_DECISION_KEYS
+        ];
+      summaryRows.push([
+        t("shifts.detail.reviewCard.decision"),
+        decisionKey ? t(decisionKey) : shift.varianceDecision,
+      ]);
+    }
+    if (shift.adjustmentReference) {
+      summaryRows.push([
+        t("shifts.detail.reviewCard.adjustmentReference"),
+        shift.adjustmentReference,
+      ]);
+    }
+    const safeNo = shift.shiftNo.replace(/[^\w.-]+/g, "-");
+    downloadCsv(`shift-summary-${safeNo}-${csvStamp()}.csv`, [
+      summaryHeaders,
+      ...summaryRows,
+    ]);
+  }
 
   return (
     <div className="w-full px-5 py-4">
@@ -127,10 +186,24 @@ export function ShiftDetailPage({ shiftId }: { shiftId: string }) {
             <ArrowLeft className="size-4" strokeWidth={1.75} />
             {t("shifts.detail.back")}
           </button>
-          <button type="button" className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-muted disabled:cursor-not-allowed disabled:opacity-70" disabled title={t("shifts.disabled.requestCashCountHint")}>
-            {t("shifts.requestCashCount")}
-          </button>
-          <button type="button" className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-muted disabled:cursor-not-allowed disabled:opacity-70" disabled>
+          {detail.status === "OPEN" ? (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-canvas"
+              onClick={() => setCashCountOpen(true)}
+            >
+              {detail.cashCountStatus === "REQUESTED"
+                ? t("shifts.cashCount.manageRequest")
+                : t("shifts.requestCashCount")}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-canvas"
+            title={t("shifts.detail.exportHint")}
+            onClick={exportCsv}
+          >
+            <Download className="size-4" strokeWidth={1.75} />
             {t("shifts.detail.generateReport")}
           </button>
           {detail.status === "FLAGGED" ? (
@@ -284,6 +357,16 @@ export function ShiftDetailPage({ shiftId }: { shiftId: string }) {
           onCancel={() => setReviewOpen(false)}
           onResolved={() => {
             setReviewOpen(false);
+            setReload((n) => n + 1);
+          }}
+        />
+      ) : null}
+      {cashCountOpen ? (
+        <RequestCashCountModal
+          shift={detail}
+          onCancel={() => setCashCountOpen(false)}
+          onDone={() => {
+            setCashCountOpen(false);
             setReload((n) => n + 1);
           }}
         />

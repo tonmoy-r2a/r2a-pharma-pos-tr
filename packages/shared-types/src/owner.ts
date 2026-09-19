@@ -32,6 +32,11 @@ export type OwnerInventoryTab = z.infer<typeof ownerInventoryTabSchema>;
 export const ownerInventoryQuerySchema = z.object({
   q: z.string().min(1).optional(),
   tab: ownerInventoryTabSchema.optional().default("all"),
+  /**
+   * Optional supplier deep-link (Prod P4). Products linked via ACTIVE batches
+   * with that supplierId and/or purchase-order lines for that supplier.
+   */
+  supplierId: z.string().trim().min(1).max(128).optional(),
   limit: z.coerce.number().int().positive().max(100).default(25),
   offset: z.coerce.number().int().nonnegative().default(0),
 });
@@ -132,4 +137,151 @@ export const ownerSalesReportResponseSchema = z.object({
 });
 export type OwnerSalesReportResponse = z.infer<
   typeof ownerSalesReportResponseSchema
+>;
+
+/** Product movement report presets (Enhance D2). Inclusive UTC day spans. */
+export const productMovementPresetSchema = z.enum([
+  "last30",
+  "last90",
+  "last180",
+]);
+export type ProductMovementPreset = z.infer<typeof productMovementPresetSchema>;
+
+export const productMovementBandSchema = z.enum([
+  "all",
+  "high_demand",
+  "steady",
+  "low_sell",
+  "no_sales",
+]);
+export type ProductMovementBandFilter = z.infer<
+  typeof productMovementBandSchema
+>;
+
+export const demandBandSchema = z.enum([
+  "high_demand",
+  "steady",
+  "low_sell",
+  "no_sales",
+]);
+export type DemandBand = z.infer<typeof demandBandSchema>;
+
+export const productMovementStockStatusSchema = z.enum([
+  "out",
+  "low",
+  "healthy",
+  "no_threshold",
+]);
+export type ProductMovementStockStatus = z.infer<
+  typeof productMovementStockStatusSchema
+>;
+
+export const ownerProductMovementQuerySchema = z.object({
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
+  preset: productMovementPresetSchema.optional(),
+  storeId: z.string().min(1).optional(),
+  band: productMovementBandSchema.optional().default("all"),
+  q: z.string().min(1).optional(),
+  limit: z.coerce.number().int().positive().max(200).default(50),
+  offset: z.coerce.number().int().nonnegative().default(0),
+});
+export type OwnerProductMovementQuery = z.infer<
+  typeof ownerProductMovementQuerySchema
+>;
+
+export const ownerProductMovementItemSchema = z.object({
+  productId: z.string(),
+  sku: z.string(),
+  name: z.string(),
+  genericName: z.string().nullable(),
+  band: demandBandSchema,
+  unitsSold: z.number(),
+  revenue: z.number(),
+  txnCount: z.number(),
+  avgDailyUnits: z.number(),
+  onHand: z.number(),
+  reorderLevel: z.number().nullable(),
+  daysOfCover: z.number().nullable(),
+  stockStatus: productMovementStockStatusSchema,
+});
+
+export const ownerProductMovementResponseSchema = z.object({
+  range: z.object({
+    from: z.string(),
+    to: z.string(),
+    preset: productMovementPresetSchema.optional(),
+    spanDays: z.number().int().positive(),
+  }),
+  meta: z.object({
+    sellerCount: z.number().int().nonnegative(),
+    totalRows: z.number().int().nonnegative(),
+  }),
+  kpis: z.object({
+    highDemandCount: z.number().int().nonnegative(),
+    steadyCount: z.number().int().nonnegative(),
+    lowSellCount: z.number().int().nonnegative(),
+    noSalesCount: z.number().int().nonnegative(),
+    totalUnitsSold: z.number(),
+    totalRevenue: z.number(),
+  }),
+  items: z.array(ownerProductMovementItemSchema),
+});
+export type OwnerProductMovementResponse = z.infer<
+  typeof ownerProductMovementResponseSchema
+>;
+
+/** Sale-priority stock alarms (Enhance D3). Reuses movement presets/bands. */
+export const stockPriorityCodeSchema = z.enum([
+  "P1_restock_now",
+  "P2_restock_soon",
+  "P3_watch_cover",
+  "P4_review_slow",
+]);
+export type StockPriorityCode = z.infer<typeof stockPriorityCodeSchema>;
+
+export const ownerStockPriorityQuerySchema = z.object({
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
+  preset: productMovementPresetSchema.optional(),
+  storeId: z.string().min(1).optional(),
+  limit: z.coerce.number().int().positive().max(100).default(25),
+});
+export type OwnerStockPriorityQuery = z.infer<
+  typeof ownerStockPriorityQuerySchema
+>;
+
+export const ownerStockPriorityItemSchema = z.object({
+  productId: z.string(),
+  sku: z.string(),
+  name: z.string(),
+  genericName: z.string().nullable(),
+  priority: stockPriorityCodeSchema,
+  reasons: z.array(z.string()),
+  band: demandBandSchema,
+  unitsSold: z.number(),
+  avgDailyUnits: z.number(),
+  onHand: z.number(),
+  reorderLevel: z.number().nullable(),
+  daysOfCover: z.number().nullable(),
+  stockStatus: productMovementStockStatusSchema,
+});
+
+export const ownerStockPriorityResponseSchema = z.object({
+  range: z.object({
+    from: z.string(),
+    to: z.string(),
+    preset: productMovementPresetSchema.optional(),
+    spanDays: z.number().int().positive(),
+  }),
+  counts: z.object({
+    p1: z.number().int().nonnegative(),
+    p2: z.number().int().nonnegative(),
+    p3: z.number().int().nonnegative(),
+    p4: z.number().int().nonnegative(),
+  }),
+  items: z.array(ownerStockPriorityItemSchema),
+});
+export type OwnerStockPriorityResponse = z.infer<
+  typeof ownerStockPriorityResponseSchema
 >;

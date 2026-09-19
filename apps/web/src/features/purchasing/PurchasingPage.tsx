@@ -8,6 +8,7 @@ import {
   ShoppingBag,
   Truck,
   Wallet,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLocale } from "@/i18n";
@@ -25,15 +26,22 @@ import {
   type PurchaseOrderListRow,
   type PurchaseOrderStatus,
 } from "@/lib/purchaseOrders";
+import { fetchSupplierDetail } from "@/lib/suppliers";
 import { FilterDropdown } from "@/features/sales/FilterDropdown";
 
 const PAGE_SIZE = 25;
 
 type StatusFilter = "ALL" | PurchaseOrderStatus;
 
+function readSupplierIdFromUrl(): string {
+  const raw = new URLSearchParams(window.location.search).get("supplierId");
+  return raw?.trim() || "";
+}
+
 /**
  * Purchasing list (Batch T). Content region only — chrome is Batch B.
  * Live GET /owner/purchase-orders + GET /owner/inventory-summary.
+ * Prod P3: optional `?supplierId=` deep-link filter from Supplier Details.
  * View All Receipts and Review Reorder Suggestions stay disabled.
  */
 export function PurchasingPage() {
@@ -43,6 +51,8 @@ export function PurchasingPage() {
   const [searchInput, setSearchInput] = useState("");
   const [searchQ, setSearchQ] = useState("");
   const [status, setStatus] = useState<StatusFilter>("ALL");
+  const [supplierId, setSupplierId] = useState(readSupplierIdFromUrl);
+  const [supplierName, setSupplierName] = useState<string | null>(null);
   const [page, setPage] = useState(0);
 
   const [rows, setRows] = useState<PurchaseOrderListRow[]>([]);
@@ -72,7 +82,25 @@ export function PurchasingPage() {
 
   useEffect(() => {
     setPage(0);
-  }, [status]);
+  }, [status, supplierId]);
+
+  useEffect(() => {
+    if (!supplierId) {
+      setSupplierName(null);
+      return;
+    }
+    let cancelled = false;
+    void fetchSupplierDetail(supplierId)
+      .then((supplier) => {
+        if (!cancelled) setSupplierName(supplier.name);
+      })
+      .catch(() => {
+        if (!cancelled) setSupplierName(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [supplierId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,6 +111,7 @@ export function PurchasingPage() {
       fetchPurchaseOrders({
         q: searchQ || undefined,
         status: status === "ALL" ? undefined : status,
+        supplierId: supplierId || undefined,
         limit: PAGE_SIZE,
         offset: page * PAGE_SIZE,
       }),
@@ -118,7 +147,19 @@ export function PurchasingPage() {
     return () => {
       cancelled = true;
     };
-  }, [searchQ, status, page, reload, t]);
+  }, [searchQ, status, supplierId, page, reload, t]);
+
+  function clearSupplierFilter() {
+    setSupplierId("");
+    setSupplierName(null);
+    setPage(0);
+    navigate("/purchasing");
+  }
+
+  const chipLabel =
+    supplierName ??
+    rows.find((row) => row.supplier?.id === supplierId)?.supplier?.name ??
+    null;
 
   const statusOptions = useMemo(
     () =>
@@ -246,6 +287,23 @@ export function PurchasingPage() {
                 onChange={setStatus}
                 ariaLabel={t("purchasing.filter.status")}
               />
+              {supplierId ? (
+                <div className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-2.5 py-1 text-xs font-medium text-foreground">
+                  <span className="truncate">
+                    {t("purchasing.filter.supplier")}:{" "}
+                    {chipLabel ?? t("purchasing.filter.supplierLoading")}
+                  </span>
+                  <button
+                    type="button"
+                    className="inline-flex shrink-0 items-center rounded p-0.5 text-muted hover:bg-canvas hover:text-foreground"
+                    onClick={clearSupplierFilter}
+                    aria-label={t("purchasing.filter.clearSupplier")}
+                    title={t("purchasing.filter.clearSupplier")}
+                  >
+                    <X className="size-3.5" strokeWidth={1.75} />
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             {loading ? (

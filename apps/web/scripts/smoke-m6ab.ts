@@ -134,9 +134,9 @@ function checkI18n(): void {
     "superseded create-manifest placeholder keys must be removed",
   );
   assert(
-    en.includes('"suppliers.placeholder.manifestTitle"') &&
-      bn.includes('"suppliers.placeholder.manifestTitle"'),
-    "Manifest Details placeholder keys must remain for Batch AC",
+    en.includes('"suppliers.manifestDetail.crumb"') &&
+      bn.includes('"suppliers.manifestDetail.crumb"'),
+    "Manifest Details i18n keys must exist after Batch AC",
   );
   console.log("  ✓ suppliers.manifest i18n keys in en + bn-BD");
 }
@@ -199,8 +199,9 @@ function checkPage(): void {
   assert(
     shell.includes("CreateReturnManifestPage") &&
       shell.includes('sub.kind === "returnsNew"') &&
-      shell.includes("suppliers.placeholder.manifest"),
-    "AppShell must render CreateReturnManifestPage for /new and keep details placeholder",
+      shell.includes("ManifestDetailsPage") &&
+      shell.includes('sub.kind === "returnsManifest"'),
+    "AppShell must render CreateReturnManifestPage for /new and ManifestDetailsPage for details",
   );
   assert(
     !page.includes("SRM-260815-0018") &&

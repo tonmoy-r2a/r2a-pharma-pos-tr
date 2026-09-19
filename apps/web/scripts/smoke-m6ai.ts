@@ -212,11 +212,6 @@ function checkAddCustomerPage(): void {
       shell.includes('sub.kind === "new"'),
     "AppShell must render AddCustomerPage for /customers/new",
   );
-  assert(
-    !/EditCustomerPage/.test(all) &&
-      !shell.includes("customers.edit"),
-    "No Edit Customer route may exist",
-  );
   const hardcoded = [
     "Create a customer profile directly",
     "Enter customer name",

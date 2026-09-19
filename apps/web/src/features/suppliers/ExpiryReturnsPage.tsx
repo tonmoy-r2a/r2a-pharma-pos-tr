@@ -15,6 +15,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { FilterDropdown } from "@/features/sales/FilterDropdown";
 import { useLocale, type MessageKey } from "@/i18n";
 import { ApiError } from "@/lib/api";
+import { csvStamp, downloadCsv } from "@/lib/csvExport";
 import { formatCount, formatTaka, formatUtcDate } from "@/lib/format";
 import { daysUntilExpiry } from "@/lib/ownerExpiry";
 import { useOwnerPath } from "@/lib/OwnerPathProvider";
@@ -47,10 +48,10 @@ function isSelectable(row: ReturnQueueRow): boolean {
 }
 
 /**
- * Expiry Returns queue (Batch AA). Content region only — chrome is Batch B.
+ * Expiry Returns queue (Batch AA + Prod P7 CSV). Content region only — chrome is Batch B.
  * Live GET /owner/returns/queue. Create Manifest navigates to
  * `/suppliers/returns/new` (layout is Batch AB). Mixed-supplier selection
- * cannot proceed. Export / Print stay disabled.
+ * cannot proceed. CSV exports loaded/selected rows. Print stays disabled (S2).
  */
 export function ExpiryReturnsPage() {
   const { t } = useLocale();
@@ -216,9 +217,34 @@ export function ExpiryReturnsPage() {
     navigate("/suppliers/returns/new");
   }
 
+  function exportCsv() {
+    const exportable = selectedRows.length > 0 ? selectedRows : rows;
+    if (exportable.length === 0) return;
+    const headers = [
+      t("suppliers.returns.col.medicine"),
+      t("suppliers.returns.col.batch"),
+      t("suppliers.returns.col.supplier"),
+      t("suppliers.returns.col.expiry"),
+      t("suppliers.returns.col.quantity"),
+      t("suppliers.returns.col.costValue"),
+      t("suppliers.returns.col.status"),
+    ];
+    const body = exportable.map((row) => [
+      row.product.name,
+      row.batchNumber,
+      row.supplier?.name ?? row.supplierName ?? "",
+      formatUtcDate(row.expiryDate),
+      String(row.quantityOnHand),
+      String(row.costValue),
+      t(STATUS_KEYS[row.returnStatus]),
+    ]);
+    downloadCsv(`expiry-returns-${csvStamp()}.csv`, [headers, ...body]);
+  }
+
   const createDisabledTitle = mixedSupplier
     ? t("suppliers.returns.mixedSupplier")
     : t("suppliers.returns.createDisabled");
+  const canExport = selectedRows.length > 0 || rows.length > 0;
 
   return (
     <div className="w-full px-5 py-4">
@@ -243,10 +269,14 @@ export function ExpiryReturnsPage() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            disabled
-            aria-disabled="true"
-            title={t("suppliers.returns.exportSoon")}
-            className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-md border border-border bg-slate-100 px-3 py-1.5 text-sm font-medium text-muted"
+            disabled={!canExport}
+            title={
+              canExport
+                ? t("suppliers.returns.exportHint")
+                : t("suppliers.returns.exportEmpty")
+            }
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-canvas disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-muted"
+            onClick={exportCsv}
           >
             <Download className="size-3.5" strokeWidth={1.75} />
             {t("suppliers.returns.export")}

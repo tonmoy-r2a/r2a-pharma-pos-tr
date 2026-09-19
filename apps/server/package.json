@@ -16,7 +16,10 @@
     "smoke:m6af": "node scripts/m6af-smoke.mjs",
     "smoke:m6ao": "tsx scripts/m6ao-smoke.ts",
     "smoke:m6be": "tsx scripts/m6be-smoke.ts",
+    "smoke:enhance-d2": "tsx scripts/enhance-d2-smoke.ts",
+    "smoke:enhance-d3": "tsx scripts/enhance-d3-smoke.ts",
     "smoke:m6bi": "tsx scripts/m6bi-smoke.ts",
+    "smoke:m6bm": "tsx scripts/m6bm-smoke.ts",
     "smoke:m6f": "tsx scripts/m6f-smoke.ts",
     "smoke:m6j": "tsx scripts/m6j-smoke.ts",
     "smoke:m6k": "tsx scripts/m6k-smoke.ts",
@@ -40,6 +43,7 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "pino": "^9.7.0",
+    "xlsx": "^0.18.5",
     "zod": "^3.25.76"
   },
   "devDependencies": {

@@ -43,9 +43,10 @@ export type TransactionDetailViewProps = {
 };
 
 /**
- * Transactions Detail + Reprint (M3 Batch AK).
- * Items / totals / method / customer / loyalty from local log snapshot.
- * Reprint → `buildReceiptModel` + Receipt Preview + print stub (no real IPC).
+ * Transactions Detail + Reprint (M3 Batch AK + Prod P13).
+ * Items / totals / method / customer / loyalty from entry snapshot
+ * (cloud `GET /sales/:id` preferred when online; else local log).
+ * Reprint → `buildReceiptModel` + Receipt Preview + print stub until S2.
  * ←/→ CTAs · Esc / Back → list. No Tab. No Baki.
  */
 export function TransactionDetailView({

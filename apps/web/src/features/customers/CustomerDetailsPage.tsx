@@ -31,7 +31,8 @@ import { useOwnerPath } from "@/lib/OwnerPathProvider";
  * purchases / visits / last purchase), profile grid, registration information,
  * purchase history, loyalty activity and a known-facts timeline are all honest
  * values from live data — zeros / em dashes when there is no data. Edit Customer
- * and More Actions stay disabled. A PENDING_APPROVAL id redirects to Review (AK).
+ * navigates to `/customers/:id/edit` (Prod P1). More Actions stays disabled.
+ * A PENDING_APPROVAL id redirects to Review (AK).
  */
 export function CustomerDetailsPage({ customerId }: { customerId: string }) {
   const { t } = useLocale();
@@ -171,10 +172,10 @@ function CustomerDetailBody({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            disabled
-            aria-disabled="true"
-            title={t("customers.detail.editSoon")}
-            className="inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-sm font-medium text-muted"
+            onClick={() =>
+              onNavigate(`/customers/${encodeURIComponent(profile.id)}/edit`)
+            }
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground hover:bg-canvas"
           >
             <UserRound className="size-4" strokeWidth={1.75} />
             {t("customers.detail.editCustomer")}

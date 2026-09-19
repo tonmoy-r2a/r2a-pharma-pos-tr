@@ -186,7 +186,7 @@ export async function fetchSupplierDetail(
   );
 }
 
-/** Create a supplier (Batch Y). Always ACTIVE — there is no Edit Supplier page. */
+/** Create a supplier (Batch Y). New suppliers are always ACTIVE from Add Supplier. */
 export async function createOwnerSupplier(
   input: SupplierCreatePayload,
 ): Promise<CreatedSupplier> {
@@ -194,6 +194,22 @@ export async function createOwnerSupplier(
     method: "POST",
     body: input,
   });
+}
+
+export type SupplierUpdatePayload = Partial<SupplierCreatePayload>;
+
+/** Partial update (Prod P2). PATCH /owner/suppliers/:id — ACTIVE / HOLD / DRAFT + isActive. */
+export async function updateOwnerSupplier(
+  supplierId: string,
+  input: SupplierUpdatePayload,
+): Promise<CreatedSupplier> {
+  return apiRequest<CreatedSupplier>(
+    `/api/v1/owner/suppliers/${encodeURIComponent(supplierId)}`,
+    {
+      method: "PATCH",
+      body: input,
+    },
+  );
 }
 
 const EMPTY_KPIS: SupplierKpis = {

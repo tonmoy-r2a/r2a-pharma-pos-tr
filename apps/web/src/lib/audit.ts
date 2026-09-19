@@ -69,6 +69,98 @@ export type AuditListResult = {
   offset: number;
 };
 
+export type StockAuditLineStatus = "MATCHES" | "DISCREPANCY";
+export type FefoViolationStatus = "OPEN" | "CORRECTED" | "DISMISSED";
+
+export type AuditDetailLine = {
+  id: string;
+  tenantId: string;
+  auditId: string;
+  batchId: string;
+  productId: string;
+  systemQty: number;
+  countedQty: number;
+  differenceQty: number;
+  status: StockAuditLineStatus;
+  productNameSnapshot: string;
+  batchNumberSnapshot: string;
+  expiryDateSnapshot: string;
+  costPerBaseSnapshot: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FefoViolationDetail = {
+  id: string;
+  tenantId: string;
+  storeId: string;
+  saleId?: string | null;
+  saleItemId?: string | null;
+  auditId?: string | null;
+  productId: string;
+  skippedBatchId: string;
+  pickedBatchId: string;
+  observedIssue: string;
+  recommendedAction: string;
+  status: FefoViolationStatus;
+  correctionNote?: string | null;
+  correctedAt?: string | null;
+  correctedByUserId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  product?: {
+    id: string;
+    name: string;
+    genericName?: string | null;
+    sku: string;
+  };
+  skippedBatch?: {
+    id: string;
+    batchNumber: string;
+    expiryDate: string;
+  };
+  pickedBatch?: {
+    id: string;
+    batchNumber: string;
+    expiryDate: string;
+  };
+  correctedBy?: AuditUser | null;
+};
+
+export type AuditDetail = {
+  id: string;
+  tenantId: string;
+  storeId: string;
+  auditNo: string;
+  status: StockAuditStatus;
+  locationLabel: string;
+  itemsChecked: number;
+  varianceAmount: number;
+  notes?: string | null;
+  startedAt: string;
+  completedAt?: string | null;
+  reviewedAt?: string | null;
+  createdByUserId: string;
+  reviewedByUserId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  store?: AuditStore;
+  createdBy?: AuditUser;
+  reviewedBy?: AuditUser | null;
+  lines: AuditDetailLine[];
+  activity: AuditActivity[];
+  fefoViolations: FefoViolationDetail[];
+};
+
+export type StockAuditReviewPayload = {
+  decision: "COMPLETE" | "KEEP_VARIANCE";
+  notes?: string;
+};
+
+export type FefoViolationCorrectPayload = {
+  correctionNote: string;
+};
+
 function qs(params: Record<string, string | number | undefined>): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -93,4 +185,34 @@ export async function fetchAudits(query: AuditListQuery = {}): Promise<AuditList
     limit: m.limit ?? query.limit ?? data.length,
     offset: m.offset ?? query.offset ?? 0,
   };
+}
+
+export async function fetchAuditDetail(auditId: string): Promise<AuditDetail> {
+  return apiRequest<AuditDetail>(`/api/v1/owner/audits/${encodeURIComponent(auditId)}`);
+}
+
+export async function reviewAudit(
+  auditId: string,
+  input: StockAuditReviewPayload,
+): Promise<AuditDetail> {
+  return apiRequest<AuditDetail>(
+    `/api/v1/owner/audits/${encodeURIComponent(auditId)}/review`,
+    {
+      method: "POST",
+      body: input,
+    },
+  );
+}
+
+export async function correctFefoViolation(
+  violationId: string,
+  input: FefoViolationCorrectPayload,
+): Promise<FefoViolationDetail> {
+  return apiRequest<FefoViolationDetail>(
+    `/api/v1/owner/fefo-violations/${encodeURIComponent(violationId)}/correct`,
+    {
+      method: "POST",
+      body: input,
+    },
+  );
 }

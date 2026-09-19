@@ -12,7 +12,7 @@
  */
 
 import type { Shift } from "@r2a/shared-types";
-import { apiRequest } from "@/lib/api";
+import { ApiError, apiRequest } from "@/lib/api";
 
 export type ActiveShift = {
   /** Cloud shift id — sent with sale ingest. */
@@ -27,6 +27,10 @@ export type ActiveShift = {
   openedByUserId?: string;
   /** Opening float in ৳ (read from cloud). */
   openingFloat: number;
+  /** Prod P10 — Owner requested cash count (close with counted cash). */
+  cashCountRequested?: boolean;
+  /** Optional owner note from cash-count request. */
+  cashCountNote?: string | null;
 };
 
 const PREFIX = "pharmasync.shift";
@@ -59,6 +63,11 @@ function parseActive(raw: string | null): ActiveShift | null {
         : undefined;
     const openingFloat =
       typeof o.openingFloat === "number" ? o.openingFloat : 0;
+    const cashCountRequested = o.cashCountRequested === true;
+    const cashCountNote =
+      typeof o.cashCountNote === "string" && o.cashCountNote.trim()
+        ? o.cashCountNote.trim()
+        : null;
     return {
       shiftId,
       shiftNo: shiftNo || "—",
@@ -66,10 +75,32 @@ function parseActive(raw: string | null): ActiveShift | null {
       openedByName,
       openedByUserId,
       openingFloat,
+      cashCountRequested,
+      cashCountNote,
     };
   } catch {
     return null;
   }
+}
+
+function toActiveShift(
+  cloud: Shift,
+  openedByName: string,
+  openedByUserId?: string,
+): ActiveShift {
+  return {
+    shiftId: cloud.id,
+    shiftNo: cloud.shiftNo || "—",
+    openedAt:
+      cloud.openedAt instanceof Date
+        ? cloud.openedAt.toISOString()
+        : new Date(cloud.openedAt).toISOString(),
+    openedByName,
+    openedByUserId,
+    openingFloat: Number(cloud.openingFloat),
+    cashCountRequested: cloud.cashCountStatus === "REQUESTED",
+    cashCountNote: cloud.cashCountNote ?? null,
+  };
 }
 
 function persistShift(
@@ -152,25 +183,33 @@ export const shiftStore = {
       openingFloat: number;
     },
   ): Promise<ActiveShift> {
-    const cloud = await apiRequest<Shift>("/api/v1/shifts", {
-      method: "POST",
-      body: { openingFloat: args.openingFloat },
-    });
+    try {
+      const cloud = await apiRequest<Shift>("/api/v1/shifts", {
+        method: "POST",
+        body: { openingFloat: args.openingFloat },
+      });
 
-    const shift: ActiveShift = {
-      shiftId: cloud.id,
-      shiftNo: cloud.shiftNo,
-      openedAt:
-        cloud.openedAt instanceof Date
-          ? cloud.openedAt.toISOString()
-          : new Date(cloud.openedAt).toISOString(),
-      openedByName: args.openedByName,
-      openedByUserId: args.openedByUserId,
-      openingFloat: Number(cloud.openingFloat),
-    };
-
-    persistShift(tenantId, storeId, shift);
-    return shift;
+      const shift = toActiveShift(
+        cloud,
+        args.openedByName,
+        args.openedByUserId,
+      );
+      persistShift(tenantId, storeId, shift);
+      return shift;
+    } catch (err) {
+      // Cloud already has an OPEN shift (seed, other terminal, lost cache).
+      // Adopt it so POS open/close/sale gates match the server.
+      if (err instanceof ApiError && err.statusCode === 409) {
+        const existing = await shiftStore.fetchAndCache(
+          tenantId,
+          storeId,
+          args.openedByName,
+          args.openedByUserId,
+        );
+        if (existing) return existing;
+      }
+      throw err;
+    }
   },
 
   /**
@@ -215,23 +254,26 @@ export const shiftStore = {
         clearShift(tenantId, storeId);
         return null;
       }
-      const shift: ActiveShift = {
-        shiftId: cloud.id,
-        shiftNo: cloud.shiftNo,
-        openedAt:
-          cloud.openedAt instanceof Date
-            ? cloud.openedAt.toISOString()
-            : new Date(cloud.openedAt).toISOString(),
-        openedByName: userName,
-        openedByUserId: userId,
-        openingFloat: Number(cloud.openingFloat),
-      };
+      const shift = toActiveShift(cloud, userName, userId);
       persistShift(tenantId, storeId, shift);
       return shift;
     } catch {
       // Network error — keep existing cache if any
       return shiftStore.get(tenantId, storeId);
     }
+  },
+
+  /**
+   * Prod P10 — poll cloud active shift for cash-count request flag.
+   * No-op when offline; preserves cache on network errors.
+   */
+  async refreshCashCountFlag(
+    tenantId: string,
+    storeId: string | null,
+    userName: string,
+    userId?: string,
+  ): Promise<ActiveShift | null> {
+    return shiftStore.fetchAndCache(tenantId, storeId, userName, userId);
   },
 
   /**

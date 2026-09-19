@@ -36,6 +36,9 @@
     "smoke:m6d": "tsx scripts/smoke-m6d.ts",
     "smoke:m6al": "tsx scripts/smoke-m6al.ts",
     "smoke:m6ay": "tsx scripts/smoke-m6ay.ts",
+    "smoke:prod-p8": "tsx scripts/smoke-prod-p8.ts",
+    "smoke:prod-p12": "tsx scripts/smoke-prod-p12.ts",
+    "smoke:prod-p13": "tsx scripts/smoke-prod-p13.ts",
     "smoke:web-w6": "tsx scripts/web-w6-smoke.ts"
   },
   "dependencies": {

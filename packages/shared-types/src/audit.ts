@@ -104,7 +104,7 @@ export const fefoViolationIdParamSchema = z.object({
 });
 export type FefoViolationIdParam = z.infer<typeof fefoViolationIdParamSchema>;
 
-/** Manager/Owner starts a stock audit. Desktop UI is deferred. */
+/** Manager/Owner starts a stock audit (desktop Settings → Stock Audit, Prod P8). */
 export const stockAuditStartSchema = z.object({
   storeId: z.string().min(1).optional(),
   locationLabel: z.string().min(1),

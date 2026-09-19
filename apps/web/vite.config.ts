@@ -8,6 +8,12 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Resolve workspace package from source so Vite picks up new exports
+      // without a stale CJS dist interop cache (avoids white-screen import errors).
+      "@r2a/shared-types": path.resolve(
+        __dirname,
+        "../../packages/shared-types/src/index.ts",
+      ),
     },
   },
   server: {

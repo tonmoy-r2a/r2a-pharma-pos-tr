@@ -405,6 +405,10 @@ async function main() {
 
   // Explicit batchId ingest path (owner)
   const event2 = `m2-smoke-explicit-${Date.now()}`;
+  const fefo2 = await req(`/products/${productId}/fefo-batch`, {
+    token: ownerToken,
+  });
+  const explicitBatchId = fefo2.body?.data?.id || fefoBatchId;
   const explicit = await req("/sales/ingest", {
     method: "POST",
     token: ownerToken,
@@ -417,7 +421,7 @@ async function main() {
       items: [
         {
           productId,
-          batchId: fefoBatchId,
+          batchId: explicitBatchId,
           unitType: "PIECE",
           unitQty: 1,
           quantityBase: 1,

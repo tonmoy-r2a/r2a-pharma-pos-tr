@@ -9,12 +9,14 @@ import {
 import {
   Building2,
   ChevronRight,
+  ClipboardCheck,
   Languages,
   Package,
   Wifi,
   X,
 } from "lucide-react";
 import { useAuth } from "@/features/auth";
+import { StockAuditSection } from "@/features/audit";
 import { ReceiveStockSection } from "@/features/inventory";
 import { useConnectivity, useLocalDb } from "@/features/shell";
 import { useLocale, type UiLocale } from "@/i18n";
@@ -30,7 +32,12 @@ export type SettingsPanelProps = {
   onOpenSyncQueue?: () => void;
 };
 
-type SettingsSection = "language" | "pharmacy" | "receive" | "connectivity";
+type SettingsSection =
+  | "language"
+  | "pharmacy"
+  | "receive"
+  | "stockAudit"
+  | "connectivity";
 
 const LOCALE_ORDER: UiLocale[] = ["bn-BD", "en"];
 const PHARMACY_FIELD_ORDER = [
@@ -55,16 +62,25 @@ function canReceiveStock(role: string | undefined): boolean {
   return normalized === "OWNER" || normalized === "MANAGER";
 }
 
-function sectionOrder(canReceive: boolean): SettingsSection[] {
-  return canReceive
-    ? ["language", "pharmacy", "receive", "connectivity"]
-    : ["language", "pharmacy", "connectivity"];
+/** Stock audit count — Owner/Manager only (Prod P8). Cashier: omit. */
+function canRunStockAudit(role: string | undefined): boolean {
+  const normalized = normalizeRole(role);
+  return normalized === "OWNER" || normalized === "MANAGER";
+}
+
+function sectionOrder(canReceive: boolean, canAudit: boolean): SettingsSection[] {
+  const base: SettingsSection[] = ["language", "pharmacy"];
+  if (canReceive) base.push("receive");
+  if (canAudit) base.push("stockAudit");
+  base.push("connectivity");
+  return base;
 }
 
 /**
  * Settings parent — Language + Pharmacy / Receipt Header (Batch AH)
  * + Connectivity / Force Offline (Batch AI)
- * + Receive stock form for Owner/Manager (M5 Batch C GRN).
+ * + Receive stock form for Owner/Manager (M5 Batch C GRN)
+ * + Stock Audit Count for Owner/Manager (Prod P8).
  * Category list → section detail. ←/→ · ↑/↓ · Enter · Esc. No Tab nav.
  * Owner/Manager edit pharmacy header; Cashier (and others) view-only.
  * Force Offline available to all cashier roles on this terminal.
@@ -84,7 +100,11 @@ export function SettingsPanel({ onClose, onOpenSyncQueue }: SettingsPanelProps) 
   const { deadCount, lastFlushAt } = useLocalDb();
   const canEdit = canEditPharmacyHeader(user?.role);
   const canReceive = canReceiveStock(user?.role);
-  const sections = useMemo(() => sectionOrder(canReceive), [canReceive]);
+  const canAudit = canRunStockAudit(user?.role);
+  const sections = useMemo(
+    () => sectionOrder(canReceive, canAudit),
+    [canReceive, canAudit],
+  );
   const [section, setSection] = useState<SettingsSection | null>(null);
   const [draft, setDraft] = useState<PharmacyHeader>(() =>
     resolvePharmacyHeader(
@@ -98,6 +118,7 @@ export function SettingsPanel({ onClose, onOpenSyncQueue }: SettingsPanelProps) 
   const languageNavRef = useRef<HTMLButtonElement>(null);
   const pharmacyNavRef = useRef<HTMLButtonElement>(null);
   const receiveNavRef = useRef<HTMLButtonElement>(null);
+  const stockAuditNavRef = useRef<HTMLButtonElement>(null);
   const connectivityNavRef = useRef<HTMLButtonElement>(null);
   const bnRef = useRef<HTMLButtonElement>(null);
   const enRef = useRef<HTMLButtonElement>(null);
@@ -123,6 +144,7 @@ export function SettingsPanel({ onClose, onOpenSyncQueue }: SettingsPanelProps) 
     if (id === "language") return languageNavRef;
     if (id === "pharmacy") return pharmacyNavRef;
     if (id === "receive") return receiveNavRef;
+    if (id === "stockAudit") return stockAuditNavRef;
     return connectivityNavRef;
   };
 
@@ -139,7 +161,10 @@ export function SettingsPanel({ onClose, onOpenSyncQueue }: SettingsPanelProps) 
     if (section === "receive" && !canReceive) {
       setSection(null);
     }
-  }, [section, canReceive]);
+    if (section === "stockAudit" && !canAudit) {
+      setSection(null);
+    }
+  }, [section, canReceive, canAudit]);
 
   useEffect(() => {
     if (section === null) {
@@ -156,7 +181,7 @@ export function SettingsPanel({ onClose, onOpenSyncQueue }: SettingsPanelProps) 
       else pharmacyNavRef.current?.focus();
       return;
     }
-    if (section === "receive") {
+    if (section === "receive" || section === "stockAudit") {
       return;
     }
     if (section === "connectivity") {
@@ -172,6 +197,7 @@ export function SettingsPanel({ onClose, onOpenSyncQueue }: SettingsPanelProps) 
 
   const openSection = (next: SettingsSection) => {
     if (next === "receive" && !canReceive) return;
+    if (next === "stockAudit" && !canAudit) return;
     setSection(next);
     setSavedFlash(false);
   };
@@ -492,6 +518,24 @@ export function SettingsPanel({ onClose, onOpenSyncQueue }: SettingsPanelProps) 
                 />
               </button>
             ) : null}
+            {canAudit ? (
+              <button
+                ref={stockAuditNavRef}
+                type="button"
+                data-section="stockAudit"
+                className={categoryClass("stockAudit")}
+                aria-current={section === "stockAudit" ? "page" : undefined}
+                onClick={() => openSection("stockAudit")}
+              >
+                <ClipboardCheck className="size-4 shrink-0" strokeWidth={1.75} />
+                <span className="flex-1">{t("settings.stockAudit")}</span>
+                <ChevronRight
+                  className="size-4 shrink-0 opacity-70"
+                  strokeWidth={1.75}
+                  aria-hidden
+                />
+              </button>
+            ) : null}
             <button
               ref={connectivityNavRef}
               type="button"
@@ -658,6 +702,8 @@ export function SettingsPanel({ onClose, onOpenSyncQueue }: SettingsPanelProps) 
             </div>
           ) : section === "receive" && canReceive ? (
             <ReceiveStockSection />
+          ) : section === "stockAudit" && canAudit ? (
+            <StockAuditSection />
           ) : (
             <div className="mx-auto w-full max-w-lg">
               <h2 className="text-base font-semibold text-foreground">

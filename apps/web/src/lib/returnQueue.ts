@@ -135,6 +135,145 @@ export async function createReturnManifest(input: {
   });
 }
 
+export type ReturnManifestStatus =
+  | "PREPARED"
+  | "DISPATCHED"
+  | "ACCEPTED"
+  | "REJECTED"
+  | "COMPLETED";
+
+export type ReturnSupplierDecision = "ACCEPTED" | "REJECTED";
+
+export type ReturnManifestPerson = {
+  id: string;
+  name: string;
+};
+
+export type ReturnManifestSupplier = {
+  id: string;
+  name: string;
+  expiryReturnsAccepted: boolean;
+  minDaysBeforeExpiry: number | null;
+  returnNotes: string | null;
+  status: string;
+  isActive: boolean;
+};
+
+export type ReturnManifestLine = {
+  id: string;
+  batchId: string;
+  returnQty: number;
+  costPerBase: number;
+  batch: {
+    id: string;
+    batchNumber: string;
+    expiryDate: string;
+    quantityOnHand: number;
+    costPerBase: number;
+    sellPerBase: number;
+    version: number;
+    product: {
+      id: string;
+      name: string;
+      genericName: string | null;
+      manufacturer: string | null;
+      sku: string | null;
+    };
+  };
+};
+
+export type ReturnManifestDetail = {
+  id: string;
+  srmNumber: string;
+  status: ReturnManifestStatus;
+  supplierId: string;
+  notes: string | null;
+  supplierReference: string | null;
+  preparedAt: string;
+  dispatchedAt: string | null;
+  decidedAt: string | null;
+  completedAt: string | null;
+  dispatchReference: string | null;
+  dispatchNotes: string | null;
+  decisionNotes: string | null;
+  supplier: ReturnManifestSupplier;
+  store: { id: string; name: string; code: string };
+  preparedBy: ReturnManifestPerson;
+  dispatchedBy: ReturnManifestPerson | null;
+  decidedBy: ReturnManifestPerson | null;
+  completedBy: ReturnManifestPerson | null;
+  lines: ReturnManifestLine[];
+};
+
+/** Live OWNER get — one Manifest Details payload for all statuses. */
+export async function fetchReturnManifest(
+  manifestId: string,
+): Promise<ReturnManifestDetail> {
+  return apiRequest<ReturnManifestDetail>(
+    `/api/v1/owner/return-manifests/${encodeURIComponent(manifestId)}`,
+  );
+}
+
+/** Live OWNER dispatch — posts stock via server-signed SUPPLIER_RETURN_DISPATCH. */
+export async function dispatchReturnManifest(
+  manifestId: string,
+  input: {
+    operationId: string;
+    dispatchReference?: string | null;
+    dispatchNotes?: string | null;
+  },
+): Promise<ReturnManifestDetail> {
+  const body: {
+    operationId: string;
+    dispatchReference?: string;
+    dispatchNotes?: string;
+  } = { operationId: input.operationId };
+  const dispatchReference = input.dispatchReference?.trim();
+  if (dispatchReference) body.dispatchReference = dispatchReference;
+  const dispatchNotes = input.dispatchNotes?.trim();
+  if (dispatchNotes) body.dispatchNotes = dispatchNotes;
+
+  return apiRequest<ReturnManifestDetail>(
+    `/api/v1/owner/return-manifests/${encodeURIComponent(manifestId)}/dispatch`,
+    { method: "POST", body },
+  );
+}
+
+/** Live OWNER decision — Accepted → ACCEPTED; Rejected → REJECTED (no stock restore). */
+export async function decideReturnManifest(
+  manifestId: string,
+  input: {
+    decision: ReturnSupplierDecision;
+    supplierReference?: string | null;
+    notes?: string | null;
+  },
+): Promise<ReturnManifestDetail> {
+  const body: {
+    decision: ReturnSupplierDecision;
+    supplierReference?: string;
+    notes?: string;
+  } = { decision: input.decision };
+  const supplierReference = input.supplierReference?.trim();
+  if (supplierReference) body.supplierReference = supplierReference;
+  const notes = input.notes?.trim();
+  if (notes) body.notes = notes;
+
+  return apiRequest<ReturnManifestDetail>(
+    `/api/v1/owner/return-manifests/${encodeURIComponent(manifestId)}/decision`,
+    { method: "POST", body },
+  );
+}
+
+/** Live OWNER complete — ACCEPTED → COMPLETED; no further stock move. */
+export async function completeReturnManifest(
+  manifestId: string,
+): Promise<ReturnManifestDetail> {
+  return apiRequest<ReturnManifestDetail>(
+    `/api/v1/owner/return-manifests/${encodeURIComponent(manifestId)}/complete`,
+    { method: "POST", body: {} },
+  );
+}
+
 const LOT_PAGE_SIZE = 100;
 const LOT_PAGE_CAP = 5;
 

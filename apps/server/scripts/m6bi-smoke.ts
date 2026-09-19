@@ -146,7 +146,7 @@ async function main(): Promise<void> {
   }
   pass("6. Seed product available", String(product.name));
 
-  const batches = await req(`/batches?productId=${productId}&limit=20`, { token: manager.token });
+  const batches = await req(`/batches?productId=${productId}&limit=100`, { token: manager.token });
   const batchRows = Array.isArray(batches.body.data)
     ? batches.body.data.map(asRecord).filter(Boolean) as Record<string, unknown>[]
     : [];
@@ -156,7 +156,10 @@ async function main(): Promise<void> {
   const countedBatch = stockBatches[0];
   const overrideBatch = stockBatches[1];
   if (!countedBatch || !overrideBatch) {
-    fail("7. Two in-stock batches available for audit/FEFO smoke", JSON.stringify(batchRows));
+    fail(
+      "7. Two in-stock batches available for audit/FEFO smoke",
+      `inStock=${stockBatches.length} totalReturned=${batchRows.length}`,
+    );
     return finish();
   }
   pass("7. Two in-stock batches available for audit/FEFO smoke");

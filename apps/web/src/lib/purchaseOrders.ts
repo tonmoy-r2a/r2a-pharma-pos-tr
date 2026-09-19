@@ -44,6 +44,8 @@ export type PurchaseOrdersResult = {
 export type PurchaseOrderListQuery = {
   q?: string;
   status?: PurchaseOrderStatus;
+  /** Optional supplier deep-link filter (GET /owner/purchase-orders?supplierId=). */
+  supplierId?: string;
   limit?: number;
   offset?: number;
 };
@@ -64,6 +66,8 @@ export async function fetchPurchaseOrders(
   const search = query.q?.trim();
   if (search) q.set("q", search);
   if (query.status) q.set("status", query.status);
+  const supplierId = query.supplierId?.trim();
+  if (supplierId) q.set("supplierId", supplierId);
 
   const { data, meta } = await apiRequestEnvelope<PurchaseOrderListRow[]>(
     `/api/v1/owner/purchase-orders?${q.toString()}`,
@@ -253,6 +257,54 @@ export async function confirmGoodsReceipt(
         receivedAt: input.receivedAt || undefined,
         lines: input.lines,
       },
+    },
+  );
+}
+export type GoodsReceiptDraftPayload = {
+  supplierInvoiceRef?: string;
+  deliveryNote?: string;
+  receivedDate?: string;
+  lines: Array<{
+    lineId: string;
+    lots: Array<{
+      key: string;
+      batchNumber: string;
+      expiryDate: string;
+      qty: string;
+      costPerBase: string;
+      sellPerBase: string;
+    }>;
+  }>;
+};
+
+export type GoodsReceiptDraftRow = {
+  id: string;
+  purchaseOrderId: string;
+  payload: GoodsReceiptDraftPayload;
+  updatedAt: string;
+  createdAt: string;
+  updatedByUserId: string;
+};
+
+/** Prod P15 — load incomplete GRN draft (null if none). */
+export async function fetchGoodsReceiptDraft(
+  poId: string,
+): Promise<GoodsReceiptDraftRow | null> {
+  return apiRequest<GoodsReceiptDraftRow | null>(
+    `/api/v1/owner/purchase-orders/${encodeURIComponent(poId)}/receipt-draft`,
+  );
+}
+
+/** Prod P15 — save incomplete GRN form (no stock). */
+export async function saveGoodsReceiptDraft(
+  poId: string,
+  payload: GoodsReceiptDraftPayload,
+): Promise<GoodsReceiptDraftRow> {
+  return apiRequest<GoodsReceiptDraftRow>(
+    `/api/v1/owner/purchase-orders/${encodeURIComponent(poId)}/receipt-draft`,
+    {
+      method: "PUT",
+      body: { payload },
     },
   );
 }

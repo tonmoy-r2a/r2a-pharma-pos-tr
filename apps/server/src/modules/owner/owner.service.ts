@@ -1,16 +1,28 @@
 import { prisma } from "@r2a/database";
 import type {
+  DemandBand,
   ExpiryBucket,
   OwnerDashboardQuery,
   OwnerExpiryQuery,
   OwnerInventoryQuery,
   OwnerInventoryTab,
+  OwnerProductMovementQuery,
+  OwnerProductMovementResponse,
+  OwnerStockPriorityQuery,
+  OwnerStockPriorityResponse,
   OwnerSalesReportQuery,
   OwnerSalesReportResponse,
+  ProductMovementPreset,
+  ProductMovementStockStatus,
+  StockPriorityCode,
   StaffListQuery,
   OwnerStaffCreateInput,
   OwnerStaffPatchInput,
   StaffDeactivateInput,
+  OwnerBusinessSettingsPatchInput,
+  OwnerAccountSettingsPatchInput,
+  OwnerChangePasswordInput,
+  OwnerSettingsActivityQuery,
 } from "@r2a/shared-types";
 import { AppError } from "../../utils/AppError";
 import type { TenantContext } from "../../types/tenant";
@@ -22,6 +34,7 @@ type DecimalLike = { toString(): string } | number;
 function toNumber(value: DecimalLike): number {
   return typeof value === "number" ? value : Number(value.toString());
 }
+
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -174,6 +187,250 @@ function resolveSalesReportRange(query: OwnerSalesReportQuery): {
     previousFrom: addUtcDays(startOfUtcDay(from), -spanDays),
     previousTo: endOfUtcDay(addUtcDays(startOfUtcDay(from), -1)),
   };
+}
+
+/** Inclusive UTC day span for product movement / stock-priority (Enhance D2/D3). */
+function resolveProductMovementRange(query: {
+  from?: Date;
+  to?: Date;
+  preset?: ProductMovementPreset;
+}): {
+  from: Date;
+  to: Date;
+  preset?: ProductMovementPreset;
+  spanDays: number;
+} {
+  const now = new Date();
+
+  if (query.from || query.to) {
+    const to = query.to
+      ? isUtcMidnight(query.to)
+        ? endOfUtcDay(query.to)
+        : query.to
+      : now;
+    const from = query.from
+      ? startOfUtcDay(query.from)
+      : startOfUtcDay(addUtcDays(to, -89));
+
+    if (from.getTime() > to.getTime()) {
+      throw new AppError("from must be before to", 400);
+    }
+    const spanDays =
+      (startOfUtcDay(to).getTime() - startOfUtcDay(from).getTime()) /
+        86_400_000 +
+      1;
+    if (spanDays > 366) {
+      throw new AppError("date range cannot exceed 366 days", 400);
+    }
+    return { from, to, spanDays };
+  }
+
+  const preset: ProductMovementPreset = query.preset ?? "last90";
+  const spanDays = preset === "last30" ? 30 : preset === "last90" ? 90 : 180;
+  const from = startOfUtcDay(addUtcDays(now, -(spanDays - 1)));
+  return { from, to: now, preset, spanDays };
+}
+
+type MedicineSaleAgg = {
+  name: string;
+  genericName: string | null;
+  sku: string | null;
+  unitsSold: number;
+  totalSales: number;
+  saleIds: Set<string>;
+};
+
+/** Shared SaleItem → medicine map upsert (sales report top-N + movement). */
+function accumulateMedicineSaleItem(
+  medicines: Map<string, MedicineSaleAgg>,
+  saleId: string,
+  item: {
+    productId: string;
+    productNameAtSale: string;
+    productGenericNameAtSale: string | null;
+    quantityBase: number;
+    lineTotal: DecimalLike;
+    product: { sku: string | null };
+  },
+): void {
+  const lineTotal = toNumber(item.lineTotal);
+  const medicine = medicines.get(item.productId) ?? {
+    name: item.productNameAtSale,
+    genericName: item.productGenericNameAtSale,
+    sku: item.product.sku,
+    unitsSold: 0,
+    totalSales: 0,
+    saleIds: new Set<string>(),
+  };
+  medicine.unitsSold += item.quantityBase;
+  medicine.totalSales += lineTotal;
+  medicine.saleIds.add(saleId);
+  medicines.set(item.productId, medicine);
+}
+
+function movementStockStatus(
+  onHand: number,
+  reorderLevel: number | null,
+): ProductMovementStockStatus {
+  if (onHand === 0) return "out";
+  if (reorderLevel != null && onHand > 0 && onHand <= reorderLevel) return "low";
+  if (reorderLevel == null && onHand > 0) return "no_threshold";
+  return "healthy";
+}
+
+function assignDemandBands(
+  sellers: Array<{ productId: string; unitsSold: number; revenue: number; name: string }>,
+): Map<string, DemandBand> {
+  const ranked = [...sellers].sort(
+    (a, b) =>
+      b.unitsSold - a.unitsSold ||
+      b.revenue - a.revenue ||
+      a.name.localeCompare(b.name),
+  );
+  const n = ranked.length;
+  const highCut = Math.ceil(n * 0.2);
+  const lowCut = Math.ceil(n * 0.2);
+  const bands = new Map<string, DemandBand>();
+  for (let i = 0; i < n; i++) {
+    const row = ranked[i]!;
+    if (i < highCut) bands.set(row.productId, "high_demand");
+    else if (i >= n - lowCut) bands.set(row.productId, "low_sell");
+    else bands.set(row.productId, "steady");
+  }
+  return bands;
+}
+
+export type ProductMovementRow = OwnerProductMovementResponse["items"][number];
+
+/**
+ * Shared per-product movement map (Enhance D2/D3).
+ * Aggregates SaleItem quantities/revenue, joins on-hand + reorder, assigns bands.
+ */
+export async function buildProductMovementRows(
+  ctx: TenantContext,
+  range: { from: Date; to: Date; spanDays: number },
+  storeId: string | null,
+): Promise<{ sellerCount: number; rows: ProductMovementRow[] }> {
+  const saleWhere = {
+    tenantId: ctx.tenantId,
+    ...(storeId ? { storeId } : {}),
+    soldAt: { gte: range.from, lte: range.to },
+  };
+  const batchScope = storeId ? { storeId } : storeScope(ctx);
+
+  const [sales, products, lots] = await Promise.all([
+    prisma.sale.findMany({
+      where: saleWhere,
+      select: {
+        id: true,
+        items: {
+          select: {
+            productId: true,
+            productNameAtSale: true,
+            productGenericNameAtSale: true,
+            quantityBase: true,
+            lineTotal: true,
+            product: { select: { sku: true, isActive: true } },
+          },
+        },
+      },
+    }),
+    prisma.product.findMany({
+      where: { tenantId: ctx.tenantId, isActive: true },
+      select: {
+        id: true,
+        sku: true,
+        name: true,
+        genericName: true,
+        reorderLevel: true,
+      },
+    }),
+    prisma.batch.findMany({
+      where: { tenantId: ctx.tenantId, ...batchScope },
+      select: { productId: true, quantityOnHand: true },
+    }),
+  ]);
+
+  const onHandByProduct = new Map<string, number>();
+  for (const lot of lots) {
+    onHandByProduct.set(
+      lot.productId,
+      (onHandByProduct.get(lot.productId) ?? 0) + lot.quantityOnHand,
+    );
+  }
+
+  const productById = new Map(products.map((p) => [p.id, p]));
+  const medicines = new Map<string, MedicineSaleAgg>();
+
+  for (const sale of sales) {
+    for (const item of sale.items) {
+      if (!productById.has(item.productId)) continue;
+      accumulateMedicineSaleItem(medicines, sale.id, item);
+    }
+  }
+
+  const sellers: Array<{
+    productId: string;
+    unitsSold: number;
+    revenue: number;
+    name: string;
+  }> = [];
+  for (const [productId, agg] of medicines) {
+    const product = productById.get(productId);
+    if (!product) continue;
+    if (agg.unitsSold <= 0) continue;
+    sellers.push({
+      productId,
+      unitsSold: agg.unitsSold,
+      revenue: round2(agg.totalSales),
+      name: product.name,
+    });
+  }
+
+  const bandByProduct = assignDemandBands(sellers);
+  const spanDays = Math.max(1, range.spanDays);
+  const rows: ProductMovementRow[] = [];
+
+  for (const product of products) {
+    const agg = medicines.get(product.id);
+    const unitsSold = agg?.unitsSold ?? 0;
+    const revenue = round2(agg?.totalSales ?? 0);
+    const txnCount = agg?.saleIds.size ?? 0;
+    const onHand = onHandByProduct.get(product.id) ?? 0;
+
+    if (unitsSold === 0 && onHand === 0) continue;
+
+    const band: DemandBand =
+      unitsSold === 0 ? "no_sales" : (bandByProduct.get(product.id) ?? "steady");
+    const avgDailyUnits = round2(unitsSold / spanDays);
+    const daysOfCover =
+      avgDailyUnits > 0 ? round2(onHand / avgDailyUnits) : null;
+
+    rows.push({
+      productId: product.id,
+      sku: product.sku ?? "",
+      name: product.name,
+      genericName: product.genericName,
+      band,
+      unitsSold,
+      revenue,
+      txnCount,
+      avgDailyUnits,
+      onHand,
+      reorderLevel: product.reorderLevel,
+      daysOfCover,
+      stockStatus: movementStockStatus(onHand, product.reorderLevel),
+    });
+  }
+
+  rows.sort(
+    (a, b) =>
+      b.unitsSold - a.unitsSold ||
+      b.revenue - a.revenue ||
+      a.name.localeCompare(b.name),
+  );
+
+  return { sellerCount: sellers.length, rows };
 }
 
 type Trend = "up" | "down" | "steady";
@@ -818,18 +1075,7 @@ export async function getSalesReport(
       categoryRow.totalSales += lineTotal;
       categories.set(category, categoryRow);
 
-      const medicine = medicines.get(item.productId) ?? {
-        name: item.productNameAtSale,
-        genericName: item.productGenericNameAtSale,
-        sku: item.product.sku,
-        unitsSold: 0,
-        totalSales: 0,
-        saleIds: new Set<string>(),
-      };
-      medicine.unitsSold += item.quantityBase;
-      medicine.totalSales += lineTotal;
-      medicine.saleIds.add(sale.id);
-      medicines.set(item.productId, medicine);
+      accumulateMedicineSaleItem(medicines, sale.id, item);
     }
   }
 
@@ -941,6 +1187,173 @@ export async function getSalesReport(
       total: toNumber(sale.total),
       cashierName: sale.user.name,
     })),
+  };
+}
+
+export async function getProductMovementReport(
+  ctx: TenantContext,
+  query: OwnerProductMovementQuery,
+): Promise<OwnerProductMovementResponse> {
+  const range = resolveProductMovementRange(query);
+  const storeId = await resolveOwnerStoreId(ctx, query.storeId);
+  const { sellerCount, rows } = await buildProductMovementRows(ctx, range, storeId);
+
+  const kpis = {
+    highDemandCount: 0,
+    steadyCount: 0,
+    lowSellCount: 0,
+    noSalesCount: 0,
+    totalUnitsSold: 0,
+    totalRevenue: 0,
+  };
+  for (const row of rows) {
+    if (row.band === "high_demand") kpis.highDemandCount += 1;
+    else if (row.band === "steady") kpis.steadyCount += 1;
+    else if (row.band === "low_sell") kpis.lowSellCount += 1;
+    else kpis.noSalesCount += 1;
+    kpis.totalUnitsSold += row.unitsSold;
+    kpis.totalRevenue = round2(kpis.totalRevenue + row.revenue);
+  }
+
+  const needle = query.q?.trim().toLowerCase() ?? "";
+  const bandFilter = query.band ?? "all";
+  const filtered = rows.filter((row) => {
+    if (bandFilter !== "all" && row.band !== bandFilter) return false;
+    if (!needle) return true;
+    const hay = [row.name, row.genericName ?? "", row.sku]
+      .join(" ")
+      .toLowerCase();
+    return hay.includes(needle);
+  });
+
+  const limit = query.limit ?? 50;
+  const offset = query.offset ?? 0;
+  const items = filtered.slice(offset, offset + limit);
+
+  return {
+    range: {
+      from: range.from.toISOString(),
+      to: range.to.toISOString(),
+      ...(range.preset ? { preset: range.preset } : {}),
+      spanDays: range.spanDays,
+    },
+    meta: {
+      sellerCount,
+      totalRows: filtered.length,
+    },
+    kpis,
+    items,
+  };
+}
+
+const PRIORITY_RANK: Record<StockPriorityCode, number> = {
+  P1_restock_now: 1,
+  P2_restock_soon: 2,
+  P3_watch_cover: 3,
+  P4_review_slow: 4,
+};
+
+/**
+ * Derive sale-priority alarms from the shared movement map (Enhance D3).
+ * Highest matching priority wins; sorted P1→P4 then avgDailyUnits DESC.
+ */
+function deriveStockPriority(
+  row: ProductMovementRow,
+): {
+  priority: StockPriorityCode;
+  reasons: string[];
+} | null {
+  if (row.band === "high_demand" && row.stockStatus === "out") {
+    return {
+      priority: "P1_restock_now",
+      reasons: ["high_demand", "out"],
+    };
+  }
+
+  if (row.band === "high_demand") {
+    const lowCover =
+      row.daysOfCover != null && row.daysOfCover < 7;
+    if (row.stockStatus === "low" || lowCover) {
+      const reasons = ["high_demand"];
+      if (row.stockStatus === "low") reasons.push("low");
+      if (lowCover) reasons.push("low_cover");
+      return { priority: "P2_restock_soon", reasons };
+    }
+    if (row.daysOfCover != null && row.daysOfCover < 14) {
+      return {
+        priority: "P3_watch_cover",
+        reasons: ["high_demand", "thin_cover"],
+      };
+    }
+  }
+
+  if (
+    (row.band === "low_sell" || row.band === "no_sales") &&
+    row.onHand > 0
+  ) {
+    return {
+      priority: "P4_review_slow",
+      reasons: [row.band, "on_hand"],
+    };
+  }
+
+  return null;
+}
+
+export async function getStockPriorityReport(
+  ctx: TenantContext,
+  query: OwnerStockPriorityQuery,
+): Promise<OwnerStockPriorityResponse> {
+  const range = resolveProductMovementRange(query);
+  const storeId = await resolveOwnerStoreId(ctx, query.storeId);
+  const { rows } = await buildProductMovementRows(ctx, range, storeId);
+
+  const counts = { p1: 0, p2: 0, p3: 0, p4: 0 };
+  const prioritized: OwnerStockPriorityResponse["items"] = [];
+
+  for (const row of rows) {
+    const derived = deriveStockPriority(row);
+    if (!derived) continue;
+    if (derived.priority === "P1_restock_now") counts.p1 += 1;
+    else if (derived.priority === "P2_restock_soon") counts.p2 += 1;
+    else if (derived.priority === "P3_watch_cover") counts.p3 += 1;
+    else counts.p4 += 1;
+
+    prioritized.push({
+      productId: row.productId,
+      sku: row.sku,
+      name: row.name,
+      genericName: row.genericName,
+      priority: derived.priority,
+      reasons: derived.reasons,
+      band: row.band,
+      unitsSold: row.unitsSold,
+      avgDailyUnits: row.avgDailyUnits,
+      onHand: row.onHand,
+      reorderLevel: row.reorderLevel,
+      daysOfCover: row.daysOfCover,
+      stockStatus: row.stockStatus,
+    });
+  }
+
+  prioritized.sort(
+    (a, b) =>
+      PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
+      b.avgDailyUnits - a.avgDailyUnits ||
+      a.name.localeCompare(b.name),
+  );
+
+  const limit = query.limit ?? 25;
+
+  return {
+    range: {
+      from: range.from.toISOString(),
+      to: range.to.toISOString(),
+      ...(range.preset ? { preset: range.preset } : {}),
+      spanDays: range.spanDays,
+    },
+    counts,
+    items: prioritized.slice(0, limit),
   };
 }
 
@@ -1144,6 +1557,10 @@ function inTab(tab: OwnerInventoryTab, flags: {
 /**
  * Paged owner inventory (one round-trip). Cost/sell/margin always present
  * (OWNER-only route). Manufacturer is null when unset — do not invent.
+ *
+ * Optional `supplierId` (Prod P4): restrict to products linked to that supplier
+ * via ACTIVE batches with `Batch.supplierId` and/or purchase-order lines on POs
+ * for that supplier (same rule as Supplier Details products list).
  */
 export async function getInventoryList(
   ctx: TenantContext,
@@ -1151,9 +1568,86 @@ export async function getInventoryList(
 ) {
   const today = new Date();
   const scope = storeScope(ctx);
+
+  let supplierProductIds: Set<string> | null = null;
+  if (query.supplierId) {
+    const [batchLinks, poLinks] = await Promise.all([
+      prisma.batch.findMany({
+        where: {
+          tenantId: ctx.tenantId,
+          ...scope,
+          supplierId: query.supplierId,
+          status: "ACTIVE",
+        },
+        select: { productId: true },
+        distinct: ["productId"],
+      }),
+      prisma.purchaseOrderLine.findMany({
+        where: {
+          purchaseOrder: {
+            tenantId: ctx.tenantId,
+            ...scope,
+            supplierId: query.supplierId,
+          },
+        },
+        select: { productId: true },
+        distinct: ["productId"],
+      }),
+    ]);
+    supplierProductIds = new Set<string>();
+    for (const row of batchLinks) supplierProductIds.add(row.productId);
+    for (const row of poLinks) supplierProductIds.add(row.productId);
+  }
+
+  if (supplierProductIds && supplierProductIds.size === 0) {
+    return {
+      items: [],
+      total: 0,
+      limit: query.limit,
+      offset: query.offset,
+      tabs: {
+        all: 0,
+        low: 0,
+        out: 0,
+        expiring30: 0,
+        expiring90: 0,
+        expired: 0,
+      },
+      summary: {
+        productCount: 0,
+        costValue: 0,
+        lowStockCount: 0,
+        outOfStockCount: 0,
+        expiring90dBatchCount: 0,
+      },
+      attention: {
+        outOfStockCount: 0,
+        expiring30dBatchCount: 0,
+        expiringStockValue90d: 0,
+        lowStockCount: 0,
+      },
+    };
+  }
+
+  const productWhere = {
+    tenantId: ctx.tenantId,
+    isActive: true,
+    ...(supplierProductIds
+      ? { id: { in: [...supplierProductIds] } }
+      : {}),
+  };
+
+  const lotWhere = {
+    tenantId: ctx.tenantId,
+    ...scope,
+    ...(supplierProductIds
+      ? { productId: { in: [...supplierProductIds] } }
+      : {}),
+  };
+
   const [products, lots] = await Promise.all([
     prisma.product.findMany({
-      where: { tenantId: ctx.tenantId, isActive: true },
+      where: productWhere,
       select: {
         id: true,
         name: true,
@@ -1167,7 +1661,7 @@ export async function getInventoryList(
       orderBy: { name: "asc" },
     }),
     prisma.batch.findMany({
-      where: { tenantId: ctx.tenantId, ...scope },
+      where: lotWhere,
       select: {
         productId: true,
         quantityOnHand: true,
@@ -2104,3 +2598,296 @@ export async function reactivateStaff(ctx: TenantContext, id: string) {
 
   return { success: true };
 }
+
+// --- Slice 8: Settings & Business Profile ---
+
+export async function getBusinessSettings(ctx: TenantContext) {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: ctx.tenantId },
+  });
+  if (!tenant) {
+    throw new AppError("Tenant not found", 404);
+  }
+
+  const store = await prisma.store.findFirst({
+    where: { tenantId: ctx.tenantId, isActive: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const timelineEvents = await prisma.configurationActivityEvent.findMany({
+    where: { tenantId: ctx.tenantId },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    include: {
+      actor: { select: { name: true } },
+    },
+  });
+
+  return {
+    tenant: {
+      id: tenant.id,
+      name: tenant.name,
+      slug: tenant.slug,
+      legalName: tenant.legalName,
+      tradeLicenseNo: tenant.tradeLicenseNo,
+      drugLicenseNo: tenant.drugLicenseNo,
+      vatRegNo: tenant.vatRegNo,
+      contactEmail: tenant.contactEmail,
+      contactPhone: tenant.contactPhone,
+      address: tenant.address,
+      website: tenant.website,
+      currency: tenant.currency || "BDT",
+      timezone: tenant.timezone || "Asia/Dhaka",
+      openingHours: tenant.openingHours,
+      updatedAt: tenant.updatedAt.toISOString(),
+    },
+    store: store
+      ? {
+          id: store.id,
+          name: store.name,
+          code: store.code,
+          legalName: store.legalName,
+          tradeLicenseNo: store.tradeLicenseNo,
+          drugLicenseNo: store.drugLicenseNo,
+          vatRegNo: store.vatRegNo,
+          contactEmail: store.contactEmail,
+          contactPhone: store.contactPhone,
+          address: store.address,
+          openingHours: store.openingHours,
+          timezone: store.timezone,
+          isActive: store.isActive,
+        }
+      : null,
+    timeline: timelineEvents.map((e) => ({
+      id: e.id,
+      type: e.type,
+      section: e.section,
+      summary: e.summary,
+      actorName: e.actor?.name ?? null,
+      createdAt: e.createdAt.toISOString(),
+    })),
+  };
+}
+
+export async function patchBusinessSettings(
+  ctx: TenantContext,
+  input: OwnerBusinessSettingsPatchInput,
+) {
+  const tenantUpdateData: Record<string, unknown> = {};
+  if (input.name !== undefined) tenantUpdateData.name = input.name;
+  if (input.legalName !== undefined) tenantUpdateData.legalName = input.legalName;
+  if (input.tradeLicenseNo !== undefined) tenantUpdateData.tradeLicenseNo = input.tradeLicenseNo;
+  if (input.drugLicenseNo !== undefined) tenantUpdateData.drugLicenseNo = input.drugLicenseNo;
+  if (input.vatRegNo !== undefined) tenantUpdateData.vatRegNo = input.vatRegNo;
+  if (input.contactEmail !== undefined) tenantUpdateData.contactEmail = input.contactEmail || null;
+  if (input.contactPhone !== undefined) tenantUpdateData.contactPhone = input.contactPhone;
+  if (input.address !== undefined) tenantUpdateData.address = input.address;
+  if (input.website !== undefined) tenantUpdateData.website = input.website;
+  if (input.openingHours !== undefined) tenantUpdateData.openingHours = input.openingHours;
+  if (input.timezone !== undefined) tenantUpdateData.timezone = input.timezone;
+
+  await prisma.$transaction(async (tx) => {
+    if (Object.keys(tenantUpdateData).length > 0) {
+      await tx.tenant.update({
+        where: { id: ctx.tenantId },
+        data: tenantUpdateData,
+      });
+    }
+
+    if (
+      input.storeName !== undefined ||
+      input.storeAddress !== undefined ||
+      input.storePhone !== undefined ||
+      input.storeOpeningHours !== undefined
+    ) {
+      const primaryStore = await tx.store.findFirst({
+        where: { tenantId: ctx.tenantId },
+        orderBy: { createdAt: "asc" },
+      });
+      if (primaryStore) {
+        const storeUpdateData: Record<string, unknown> = {};
+        if (input.storeName !== undefined) storeUpdateData.name = input.storeName;
+        if (input.storeAddress !== undefined) storeUpdateData.address = input.storeAddress;
+        if (input.storePhone !== undefined) storeUpdateData.contactPhone = input.storePhone;
+        if (input.storeOpeningHours !== undefined) storeUpdateData.openingHours = input.storeOpeningHours;
+        await tx.store.update({
+          where: { id: primaryStore.id },
+          data: storeUpdateData,
+        });
+      }
+    }
+
+    await tx.configurationActivityEvent.create({
+      data: {
+        tenantId: ctx.tenantId,
+        actorUserId: ctx.userId,
+        type: "BUSINESS_PROFILE_UPDATED",
+        section: "BUSINESS_PROFILE",
+        summary: "Business profile details updated",
+        details: input as object,
+      },
+    });
+  });
+
+  return getBusinessSettings(ctx);
+}
+
+export async function getAccountSettings(ctx: TenantContext) {
+  const user = await prisma.user.findFirst({
+    where: { id: ctx.userId, tenantId: ctx.tenantId },
+  });
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  const activities = await prisma.configurationActivityEvent.findMany({
+    where: { tenantId: ctx.tenantId, actorUserId: ctx.userId },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+  });
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    phone: user.phone,
+    lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
+    createdAt: user.createdAt.toISOString(),
+    recentActivity: activities.map((a) => ({
+      id: a.id,
+      type: a.type,
+      summary: a.summary,
+      createdAt: a.createdAt.toISOString(),
+    })),
+  };
+}
+
+export async function patchAccountSettings(
+  ctx: TenantContext,
+  input: OwnerAccountSettingsPatchInput,
+) {
+  const updateData: Record<string, unknown> = {};
+  if (input.name !== undefined) updateData.name = input.name;
+  if (input.phone !== undefined) updateData.phone = input.phone;
+
+  await prisma.$transaction(async (tx) => {
+    if (Object.keys(updateData).length > 0) {
+      await tx.user.update({
+        where: { id: ctx.userId },
+        data: updateData,
+      });
+    }
+
+    await tx.configurationActivityEvent.create({
+      data: {
+        tenantId: ctx.tenantId,
+        actorUserId: ctx.userId,
+        type: "ACCOUNT_PROFILE_UPDATED",
+        section: "ACCOUNT_SECURITY",
+        summary: "Account profile details updated",
+      },
+    });
+  });
+
+  return getAccountSettings(ctx);
+}
+
+export async function changeOwnerPassword(
+  ctx: TenantContext,
+  input: OwnerChangePasswordInput,
+) {
+  const user = await prisma.user.findFirst({
+    where: { id: ctx.userId, tenantId: ctx.tenantId },
+  });
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  const isMatch = await bcrypt.compare(input.currentPassword, user.passwordHash);
+  if (!isMatch) {
+    throw new AppError("Current password is incorrect", 400);
+  }
+
+  const newHash = await bcrypt.hash(input.newPassword, 12);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: user.id },
+      data: { passwordHash: newHash },
+    });
+
+    await tx.configurationActivityEvent.create({
+      data: {
+        tenantId: ctx.tenantId,
+        actorUserId: ctx.userId,
+        type: "PASSWORD_CHANGED",
+        section: "ACCOUNT_SECURITY",
+        summary: "Password changed successfully",
+      },
+    });
+  });
+
+  return { success: true, message: "Password updated successfully" };
+}
+
+export async function getSettingsActivity(
+  ctx: TenantContext,
+  query: OwnerSettingsActivityQuery,
+) {
+  const limit = query.limit ?? 20;
+  const offset = query.offset ?? 0;
+
+  const [items, total] = await Promise.all([
+    prisma.configurationActivityEvent.findMany({
+      where: { tenantId: ctx.tenantId },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      skip: offset,
+      include: {
+        actor: { select: { name: true } },
+      },
+    }),
+    prisma.configurationActivityEvent.count({
+      where: { tenantId: ctx.tenantId },
+    }),
+  ]);
+
+  return {
+    items: items.map((e) => ({
+      id: e.id,
+      type: e.type,
+      section: e.section,
+      summary: e.summary,
+      actorName: e.actor?.name ?? null,
+      createdAt: e.createdAt.toISOString(),
+    })),
+    total,
+    limit,
+    offset,
+  };
+}
+
+export async function getHelpStatus(ctx: TenantContext) {
+  let dbStatus: "CONNECTED" | "DISCONNECTED" = "CONNECTED";
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+  } catch {
+    dbStatus = "DISCONNECTED";
+  }
+
+  return {
+    status: dbStatus === "CONNECTED" ? ("OPERATIONAL" as const) : ("DEGRADED" as const),
+    version: "1.0.0",
+    environment: process.env.NODE_ENV || "development",
+    database: dbStatus,
+    syncEngine: "HEALTHY" as const,
+    timestamp: new Date().toISOString(),
+    supportContact: {
+      email: "support@pharmasync.com",
+      phone: "+880 9612-345678",
+      hours: "24/7 Priority Support",
+    },
+  };
+}
+

@@ -23,11 +23,18 @@ export const customerCreateSchema = z.object({
 });
 export type CustomerCreateInput = z.infer<typeof customerCreateSchema>;
 
+/** Profile edit — ACTIVE↔INACTIVE only (no pending/rejected jumps via PATCH). */
+export const customerUpdateStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
+
 export const customerUpdateSchema = z
   .object({
     name: z.string().min(1).optional(),
     phone: z.string().min(1).optional(),
     email: z.string().email().nullable().optional(),
+    dateOfBirth: z.coerce.date().nullable().optional(),
+    gender: customerGenderSchema.nullable().optional(),
+    address: z.string().trim().min(1).max(500).nullable().optional(),
+    status: customerUpdateStatusSchema.optional(),
   })
   .refine((v) => Object.keys(v).length > 0, {
     message: "At least one field is required",

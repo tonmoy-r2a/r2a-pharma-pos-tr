@@ -35,6 +35,7 @@ import {
   LocalDbProvider,
   PosToast,
   useConnectivity,
+  useTerminalPresenceHeartbeat,
   type PosToastTone,
 } from "@/features/shell";
 import type { PosBatchRow } from "@/lib/batchSelect";
@@ -80,6 +81,7 @@ import { transactionLogStore } from "@/lib/transactionLogStore";
 import { shiftStore } from "@/lib/shiftStore";
 import {
   heldSaleStore,
+  buildHeldSaleSnapshot,
   MAX_HELD_SALES,
   type HeldSaleSnapshot,
 } from "@/lib/heldSaleStore";
@@ -87,6 +89,13 @@ import {
   posCatalogOnline,
   recheckHeldSale,
 } from "@/lib/heldSaleRecheck";
+import {
+  cloudCreateHeldSale,
+  cloudDiscardHeldSale,
+  cloudResumeAckHeldSale,
+  reconcileHeldSalesOnOnline,
+} from "@/lib/cloudHeldSales";
+import { ApiError } from "@/lib/api";
 
 type PosView = "counter" | "sale" | "completed";
 
@@ -191,6 +200,7 @@ function AuthenticatedPos() {
   const { status, user, cashierLabel, logout } = useAuth();
   const { t } = useLocale();
   const { isOnline, forcedOffline, setPendingCount } = useConnectivity();
+  useTerminalPresenceHeartbeat();
   const [view, setView] = useState<PosView>("counter");
   const [modal, setModal] = useState<PosModal>({ kind: "none" });
   /** Transactions list (Batch AJ) — does not clear sale state. */
@@ -455,6 +465,24 @@ function AuthenticatedPos() {
     setHeldCount(heldSaleStore.count(tenantId, user?.storeId ?? null));
   }, [user?.tenantId, user?.storeId]);
 
+  /** Prod P12 — when online, push local-only holds then mirror cloud (canonical). */
+  useEffect(() => {
+    if (!isOnline || !user?.tenantId || !user.storeId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        await reconcileHeldSalesOnOnline(user.tenantId, user.storeId);
+        if (!cancelled) refreshHeldCount();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn("[held] reconcile failed:", msg);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOnline, user?.tenantId, user?.storeId, refreshHeldCount]);
+
   /** Abort card/MFS stub controllers and invalidate in-flight ingest. */
   const abortOpenTenders = useCallback(() => {
     tenderEpochRef.current += 1;
@@ -463,13 +491,14 @@ function AuthenticatedPos() {
   }, []);
 
   /**
-   * Hold / park the active sale (Batch AN + AO · F6).
+   * Hold / park the active sale (Batch AN + AO · F6 + Prod P12 cloud).
    * Allowed on sale view with ≥1 line, including while payment/loyalty modals
    * are open. On success: abort card/MFS stubs, close modals, drop tender
    * drafts (cash received / card approved / MFS processing are not stored).
    * Lands on empty New Sale without the F2 shift gate (shift stays as-is).
+   * Online → cloud create (store-scoped max 3); offline → local heldSaleStore.
    */
-  const holdActiveSale = useCallback(() => {
+  const holdActiveSale = useCallback(async () => {
     if (view !== "sale") return;
     if (completingSale) {
       showToast(t("hold.busy"), "info");
@@ -482,25 +511,58 @@ function AuthenticatedPos() {
     const tenantId = user?.tenantId;
     if (!tenantId) return;
 
-    const result = heldSaleStore.add(tenantId, user?.storeId ?? null, {
+    const input = {
       lines: cartLines,
       customer: saleCustomer,
       loyalty: appliedLoyalty,
-    });
-    if (!result.ok) {
-      if (result.reason === "at_capacity") {
-        showToast(
-          t("hold.atCapacity").replaceAll("{max}", String(MAX_HELD_SALES)),
-          "info",
-        );
-        return;
-      }
-      if (result.reason === "empty_lines") {
-        showToast(t("hold.emptyCart"), "info");
-        return;
-      }
-      showToast(t("hold.storageFailed"), "error");
+    };
+    const snapshot = buildHeldSaleSnapshot(input);
+    if (!snapshot) {
+      showToast(t("hold.emptyCart"), "info");
       return;
+    }
+
+    if (isOnline && user.storeId) {
+      try {
+        const cloudSnap = await cloudCreateHeldSale({
+          ...input,
+          id: snapshot.id,
+          heldAt: snapshot.heldAt,
+          label: snapshot.label,
+        });
+        const put = heldSaleStore.put(tenantId, user.storeId, cloudSnap);
+        if (!put.ok && put.reason === "storage") {
+          showToast(t("hold.storageFailed"), "error");
+          return;
+        }
+      } catch (err) {
+        if (err instanceof ApiError && err.statusCode === 409) {
+          showToast(
+            t("hold.atCapacity").replaceAll("{max}", String(MAX_HELD_SALES)),
+            "info",
+          );
+          return;
+        }
+        showToast(t("hold.cloudFailed"), "error");
+        return;
+      }
+    } else {
+      const result = heldSaleStore.put(tenantId, user?.storeId ?? null, snapshot);
+      if (!result.ok) {
+        if (result.reason === "at_capacity") {
+          showToast(
+            t("hold.atCapacity").replaceAll("{max}", String(MAX_HELD_SALES)),
+            "info",
+          );
+          return;
+        }
+        if (result.reason === "empty_lines") {
+          showToast(t("hold.emptyCart"), "info");
+          return;
+        }
+        showToast(t("hold.storageFailed"), "error");
+        return;
+      }
     }
 
     abortOpenTenders();
@@ -518,7 +580,10 @@ function AuthenticatedPos() {
     setSyncQueueOpen(false);
     setView("sale");
     refreshHeldCount();
-    showToast(t("hold.parked"), "success");
+    showToast(
+      isOnline ? t("hold.parkedCloud") : t("hold.parked"),
+      "success",
+    );
   }, [
     view,
     completingSale,
@@ -527,6 +592,7 @@ function AuthenticatedPos() {
     appliedLoyalty,
     user?.tenantId,
     user?.storeId,
+    isOnline,
     abortOpenTenders,
     refreshHeldCount,
     showToast,
@@ -553,6 +619,7 @@ function AuthenticatedPos() {
    * Resume a held snapshot into the empty active cart.
    * Soft recheck (Batch AO): strip unsellable lines; clamp short stock;
    * if nothing remains sellable, keep the hold and toast.
+   * Online: resume-ack on cloud after successful restore.
    */
   const resumeHeldSale = useCallback(
     async (snapshot: HeldSaleSnapshot) => {
@@ -573,6 +640,19 @@ function AuthenticatedPos() {
       if (checked.lines.length === 0) {
         showToast(t("hold.resumeAllUnsellable"), "error");
         return;
+      }
+
+      if (isOnline && user.storeId) {
+        try {
+          await cloudResumeAckHeldSale(snapshot.id);
+        } catch (err) {
+          if (err instanceof ApiError && err.statusCode === 404) {
+            // Already resumed/discarded elsewhere — still clear local + restore cart.
+          } else {
+            showToast(t("hold.cloudFailed"), "error");
+            return;
+          }
+        }
       }
 
       heldSaleStore.remove(tenantId, user?.storeId ?? null, snapshot.id);
@@ -618,11 +698,33 @@ function AuthenticatedPos() {
       cartLines.length,
       user?.tenantId,
       user?.storeId,
+      isOnline,
       abortOpenTenders,
       refreshHeldCount,
       showToast,
       t,
     ],
+  );
+
+  /** Discard from Held list — cloud when online. */
+  const discardHeldSale = useCallback(
+    async (snapshot: HeldSaleSnapshot) => {
+      const tenantId = user?.tenantId;
+      if (!tenantId) return;
+      if (isOnline && user.storeId) {
+        try {
+          await cloudDiscardHeldSale(snapshot.id);
+        } catch (err) {
+          if (!(err instanceof ApiError && err.statusCode === 404)) {
+            showToast(t("hold.cloudFailed"), "error");
+            throw err;
+          }
+        }
+      }
+      heldSaleStore.remove(tenantId, user?.storeId ?? null, snapshot.id);
+      refreshHeldCount();
+    },
+    [user?.tenantId, user?.storeId, isOnline, refreshHeldCount, showToast, t],
   );
 
   const focusSearch = useCallback(() => {
@@ -1493,6 +1595,38 @@ function AuthenticatedPos() {
     refreshHeldCount();
   }, [refreshHeldCount]);
 
+  const bumpShiftEpoch = useCallback(() => {
+    setShiftEpoch((n) => n + 1);
+  }, []);
+
+  // Rehydrate cloud OPEN shift into localStorage (login / reconnect).
+  useEffect(() => {
+    if (status !== "authenticated" || !user?.tenantId || !isOnline) return;
+    let cancelled = false;
+    void shiftStore
+      .fetchAndCache(
+        user.tenantId,
+        user.storeId ?? null,
+        cashierLabel || user.name,
+        user.id,
+      )
+      .then(() => {
+        if (!cancelled) bumpShiftEpoch();
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    status,
+    user?.tenantId,
+    user?.storeId,
+    user?.id,
+    user?.name,
+    cashierLabel,
+    isOnline,
+    bumpShiftEpoch,
+  ]);
+
   useEffect(() => {
     if (status !== "authenticated") return;
 
@@ -1790,6 +1924,7 @@ function AuthenticatedPos() {
         }
         onCloseHeld={() => setHeldOpen(false)}
         onResumeHeld={resumeHeldSale}
+        onDiscardHeld={discardHeldSale}
         onHeldListChanged={refreshHeldCount}
         syncQueueOpen={syncQueueOpen}
         onOpenSyncQueue={openSyncQueue}
@@ -1834,7 +1969,7 @@ function AuthenticatedPos() {
           setShiftOpen(true);
         }}
         onCloseShift={() => setShiftOpen(false)}
-        onShiftChanged={() => setShiftEpoch((n) => n + 1)}
+        onShiftChanged={bumpShiftEpoch}
         settingsOpen={settingsOpen}
         onOpenSettings={() => {
           setTransactionsOpen(false);
@@ -1849,6 +1984,13 @@ function AuthenticatedPos() {
             <CounterReadyScreen
               onNewSale={startNewSale}
               shiftEpoch={shiftEpoch}
+              onOpenShift={() => {
+                setSettingsOpen(false);
+                setTransactionsOpen(false);
+                setHeldOpen(false);
+                setSyncQueueOpen(false);
+                setShiftOpen(true);
+              }}
             />
           ) : onCompleted && completedSale && completedReceipt ? (
             <SaleCompletedScreen
