@@ -20,18 +20,42 @@ app.use(
 app.use(express.json({ limit: "3mb" }));
 app.use(requestLogger);
 
+function healthPayload() {
+  return {
+    ok: true,
+    service: "@r2a/server",
+    env: env.nodeEnv,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+/** Root probes (Render / browsers) — API lives under /api/v1. */
+app.get(
+  "/",
+  catchAsync(async (_req, res) => {
+    sendResponse(res, {
+      statusCode: 200,
+      message: "OK",
+      data: {
+        ...healthPayload(),
+        health: "/health",
+        api: "/api/v1",
+      },
+    });
+  }),
+);
+
+app.head("/", (_req, res) => {
+  res.status(200).end();
+});
+
 app.get(
   "/health",
   catchAsync(async (_req, res) => {
     sendResponse(res, {
       statusCode: 200,
       message: "OK",
-      data: {
-        ok: true,
-        service: "@r2a/server",
-        env: env.nodeEnv,
-        timestamp: new Date().toISOString(),
-      },
+      data: healthPayload(),
     });
   }),
 );

@@ -17,23 +17,24 @@ import * as shiftController from "./shift.controller";
  */
 const cashierShiftRouter = Router();
 
+/** OWNER allowed: small shops where the owner runs the POS counter. */
 cashierShiftRouter.post(
   "/",
-  restrictTo("CASHIER", "MANAGER"),
+  restrictTo("CASHIER", "MANAGER", "OWNER"),
   validate({ body: shiftOpenSchema }),
   shiftController.open,
 );
 
 cashierShiftRouter.post(
   "/active/close",
-  restrictTo("CASHIER", "MANAGER"),
+  restrictTo("CASHIER", "MANAGER", "OWNER"),
   validate({ body: shiftCloseSchema }),
   shiftController.close,
 );
 
 cashierShiftRouter.get(
   "/active",
-  restrictTo("CASHIER", "MANAGER"),
+  restrictTo("CASHIER", "MANAGER", "OWNER"),
   shiftController.active,
 );
 
